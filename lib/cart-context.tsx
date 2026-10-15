@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useReducer, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useReducer, useState, ReactNode } from 'react'
 import type { Product } from './products'
 
 export interface CartItem {
@@ -71,19 +71,24 @@ const STORAGE_KEY = 'mrittika_cart'
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] })
+  // Without this, the empty initial cart is written to storage before the saved one is read,
+  // and React's dev-mode double effect run then reads that empty value back.
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) dispatch({ type: 'HYDRATE', items: JSON.parse(stored) })
     } catch {}
+    setHydrated(true)
   }, [])
 
   useEffect(() => {
+    if (!hydrated) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items))
     } catch {}
-  }, [state.items])
+  }, [state.items, hydrated])
 
   const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0)
   const subtotal = state.items.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
