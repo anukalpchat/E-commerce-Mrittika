@@ -48,10 +48,10 @@ Effort: S = under an hour, M = a few hours, L = most of a day.
 - [x] **T5 — Account page (M).** Profile edit, order history, saved addresses (used at checkout), wishlist (heart on product cards/detail).
 - [x] **T6 — Impact dashboard (M).** Per-product impact metrics in the catalogue (plastic avoided, water saved, waste diverted), totals computed from the user's paid orders, empty state for no orders.
 - [ ] **T7 — Password reset (S).** Token-based reset. No email service: reset link is shown on screen and labelled as a demo shortcut.
-- [ ] **T8 — Vendor onboarding (M).** `/vendor/register` application form (business, GSTIN format check, address, categories, T&C acceptance with context `vendor`), application status.
-- [ ] **T9 — Vendor dashboard (L).** Approved vendors manage their products (CRUD with sustainability attributes and country of origin), see orders for their items, payout summary using the commission model (e.g. 12% platform commission — confirm rate).
-- [ ] **T10 — Admin panel (L).** Seeded admin account; approve/reject vendors, moderate products, view all orders, **consent log view** (user, policy, version, context, timestamp).
-- [ ] **T11 — Catalogue from DB + search (M).** Move seed products into the DB so vendor-added products appear in the shop; text search; merge `/search` into the shop with Shop by Impact filters; vendor verification badges.
+- [x] **T8 — Vendor onboarding (M).** `/vendor/register` application form (business, GSTIN format check, address, categories, T&C acceptance with context `vendor`), application status.
+- [x] **T9 — Vendor dashboard (L).** Approved vendors manage their products (CRUD with sustainability attributes and country of origin), see orders for their items, payout summary using the commission model (10% default, editable per vendor by admin).
+- [x] **T10 — Admin panel (L).** Seeded admin account; approve/reject vendors, moderate products, view all orders, **consent log view** (user, policy, version, context, timestamp).
+- [ ] **T11 — Search (M).** ~~Catalogue in DB~~ and ~~verification badges~~ done in round 2. Remaining: text search; merge `/search` into the shop with Shop by Impact filters.
 - [ ] **T12 — Content pages (M).** Sustainability guide (scoring methodology), About, Contact & FAQ (contact form stored in DB, visible in admin).
 - [ ] **T13 — Polish (S–M).** Custom 404 and error pages, loading/empty states, keyboard pass, README completed with page list and credentials.
 

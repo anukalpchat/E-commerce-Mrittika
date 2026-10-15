@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
+import { seedDatabase } from './seed'
 
 const NOW = `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
 
@@ -102,6 +103,66 @@ CREATE TABLE IF NOT EXISTS order_events (
   created_at TEXT    NOT NULL DEFAULT ${NOW}
 );
 
+-- One row per seller. user_id is NULL for seed vendors that have no login.
+CREATE TABLE IF NOT EXISTS vendors (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id         INTEGER UNIQUE REFERENCES users(id) ON DELETE SET NULL,
+  business_name   TEXT    NOT NULL UNIQUE,
+  city            TEXT    NOT NULL,
+  state           TEXT    NOT NULL,
+  gstin           TEXT,
+  contact_email   TEXT    NOT NULL,
+  contact_phone   TEXT    NOT NULL,
+  categories      TEXT    NOT NULL,
+  description     TEXT    NOT NULL,
+  practices       TEXT    NOT NULL,
+  status          TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'suspended')),
+  commission_rate REAL    NOT NULL DEFAULT 10,
+  review_note     TEXT,
+  created_at      TEXT    NOT NULL DEFAULT ${NOW},
+  reviewed_at     TEXT
+);
+
+-- Vendor-submitted products start as pending_review; an admin sets the sustainability score when approving.
+CREATE TABLE IF NOT EXISTS products (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug                 TEXT    NOT NULL UNIQUE,
+  vendor_id            INTEGER NOT NULL REFERENCES vendors(id),
+  name                 TEXT    NOT NULL,
+  category             TEXT    NOT NULL CHECK (category IN ('home-living', 'personal-care', 'fashion', 'food')),
+  price                INTEGER NOT NULL CHECK (price > 0),
+  gst_rate             REAL    NOT NULL,
+  sustainability_score INTEGER CHECK (sustainability_score BETWEEN 0 AND 100),
+  short_description    TEXT    NOT NULL,
+  description          TEXT    NOT NULL,
+  materials            TEXT    NOT NULL,
+  certifications       TEXT    NOT NULL,
+  tags                 TEXT    NOT NULL,
+  stock_count          INTEGER NOT NULL CHECK (stock_count >= 0),
+  image_url            TEXT    NOT NULL,
+  image_color          TEXT    NOT NULL DEFAULT 'bg-stone-100',
+  country_of_origin    TEXT    NOT NULL DEFAULT 'India',
+  plastic_avoided_g    INTEGER NOT NULL DEFAULT 0,
+  water_saved_l        INTEGER NOT NULL DEFAULT 0,
+  waste_diverted_g     INTEGER NOT NULL DEFAULT 0,
+  status               TEXT    NOT NULL DEFAULT 'pending_review' CHECK (status IN ('pending_review', 'active', 'rejected', 'hidden')),
+  review_note          TEXT,
+  created_at           TEXT    NOT NULL DEFAULT ${NOW},
+  updated_at           TEXT    NOT NULL DEFAULT ${NOW}
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_id);
+
+-- Each vendor in an order ships its own items; the order is shipped/delivered once every vendor has.
+-- Keyed by vendor name because order_items snapshots the vendor's business name, which never changes.
+CREATE TABLE IF NOT EXISTS fulfilments (
+  order_id   TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  vendor     TEXT NOT NULL,
+  status     TEXT NOT NULL CHECK (status IN ('shipped', 'delivered')),
+  updated_at TEXT NOT NULL DEFAULT ${NOW},
+  PRIMARY KEY (order_id, vendor)
+);
+
 CREATE TABLE IF NOT EXISTS wishlist (
   user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_slug TEXT    NOT NULL,
@@ -110,19 +171,36 @@ CREATE TABLE IF NOT EXISTS wishlist (
 );
 `
 
+function databaseFile(): string {
+  return process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'mrittika.db')
+}
+
+/** Folder for files that live next to the database, such as uploaded product photos. */
+export function dataDir(...parts: string[]): string {
+  return path.join(path.dirname(databaseFile()), ...parts)
+}
+
 function openDatabase(): DatabaseSync {
-  const file = process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'mrittika.db')
+  const file = databaseFile()
   mkdirSync(path.dirname(file), { recursive: true })
   const db = new DatabaseSync(file)
   db.exec(SCHEMA)
+  seedDatabase(db)
   return db
 }
 
 // Cached on globalThis so dev-mode hot reloads reuse one connection instead of opening a new one per edit.
-const globalForDb = globalThis as unknown as { mrittikaDb?: DatabaseSync }
+// The schema text is cached too: when a reload brings new tables, they are created on the existing connection.
+const globalForDb = globalThis as unknown as { mrittikaDb?: DatabaseSync; mrittikaSchema?: string }
 
 export function getDb(): DatabaseSync {
-  globalForDb.mrittikaDb ??= openDatabase()
+  if (!globalForDb.mrittikaDb) {
+    globalForDb.mrittikaDb = openDatabase()
+  } else if (globalForDb.mrittikaSchema !== SCHEMA) {
+    globalForDb.mrittikaDb.exec(SCHEMA)
+    seedDatabase(globalForDb.mrittikaDb)
+  }
+  globalForDb.mrittikaSchema = SCHEMA
   return globalForDb.mrittikaDb
 }
 

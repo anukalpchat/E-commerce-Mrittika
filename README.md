@@ -30,23 +30,33 @@ Node prints `ExperimentalWarning: SQLite is an experimental feature` on startup.
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `DATABASE_PATH` | No | `./data/mrittika.db` | Location of the SQLite file |
+| `DATABASE_PATH` | No | `./data/mrittika.db` | Location of the SQLite file (uploaded photos go in `uploads/` beside it) |
+| `SEED_DEMO_ACCOUNTS` | No | unset | Set to `true` to create the demo logins when `NODE_ENV=production` |
+| `NEXT_DIST_DIR` | No | `.next` | Build folder; the test server uses `.next-test` |
 
 ## Tests
 
-Integration tests run against a live server:
+Integration tests run against a separate test server, so they never touch your `npm run dev` data:
 
 ```bash
-npm run dev                               # terminal 1
-npm test                                  # terminal 2 (uses http://localhost:3000)
-BASE_URL=http://localhost:3111 npm test   # if the server runs elsewhere
+npm run test:server   # terminal 1: port 3100, fresh database in data/test/, build output in .next-test/
+npm test              # terminal 2
 ```
 
-Tests create throwaway accounts and orders with `@example.test` emails in your local database.
+It is safe to keep `npm run dev` running at the same time.
 
-## Test credentials
+## Demo accounts
 
-There are no seeded accounts yet. Create one at `/auth?tab=register`.
+Created automatically on first start (not in production unless `SEED_DEMO_ACCOUNTS=true`):
+
+| Role | Email | Password | Opens |
+|---|---|---|---|
+| Admin | `admin@mrittika.test` | `MrittikaAdmin@2026` | `/admin` |
+| Vendor (Aranya Botanicals) | `vendor@mrittika.test` | `AranyaVendor@2026` | `/vendor/dashboard` |
+
+Buyers register themselves at `/auth?tab=register`.
+
+The catalogue (14 products, 13 vendors) is seeded into the database from `lib/products.ts` on first start.
 
 ## Payment
 
@@ -59,7 +69,7 @@ To try it: add a product to the cart → `/checkout` → sign in → fill the ad
 | Page | Route | Status |
 |---|---|---|
 | Home | `/` | Working |
-| Shop (catalogue) | `/categories` | Working (client-side filters) |
+| Shop (catalogue) | `/categories` | Working: products read from the database (client-side filters) |
 | Product detail | `/product/[slug]` | Working |
 | Cart | `/cart` | Working (stored in the browser) |
 | Checkout | `/checkout` | **Working**: sign-in required, saved addresses, T&C consent logged, simulated payment (success / fail / cancel) |
@@ -67,9 +77,9 @@ To try it: add a product to the cart → `/checkout` → sign in → fill the ad
 | Sign in / Register | `/auth` | **Working**: server-side accounts, sessions, T&C consent log |
 | Account | `/account` | **Working**: profile, orders, addresses, wishlist, consent records (`/profile` redirects here) |
 | Impact dashboard | `/account/impact` | **Working**: totals from paid orders; per-product figures are labelled estimates |
-| Vendor registration | `/vendor/register` | Placeholder |
-| Vendor dashboard | `/vendor/dashboard` | Placeholder |
-| Admin | `/admin` | Placeholder |
+| Vendor registration | `/vendor/register` | **Working**: application with GSTIN check and T&C consent; shows review status |
+| Vendor dashboard | `/vendor/dashboard` | **Working**: products (add/edit with photo upload, sent for review), orders (mark shipped/delivered), payouts statement (10% commission) |
+| Admin | `/admin` | **Working**: approve/reject/suspend vendors, review and score products, all orders, consent log, users |
 | Search | `/search` | Placeholder |
 | Sustainability guide | `/sustainability` | Placeholder |
 | Journal | `/journal` | Placeholder (stretch goal) |
@@ -80,6 +90,10 @@ To try it: add a product to the cart → `/checkout` → sign in → fill the ad
 | Privacy Policy | `/privacy` | Pending draft |
 
 ## Security notes
+
+- Vendor and admin pages and APIs check the role on the server; buyers get 403 / an "Admins only" page.
+- Uploaded photos are checked by their file signature (JPEG/PNG/WebP only, 2 MB max), stored under random names and served with `nosniff`.
+- Product prices, stock and sustainability scores are always read from the database on the server; vendors cannot set their own score.
 
 - Passwords are hashed with scrypt and a per-user random salt; plaintext is never stored or logged.
 - Sessions use a random 256-bit token in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production). Only the token's SHA-256 hash is stored, so a leaked database cannot be used to log in.

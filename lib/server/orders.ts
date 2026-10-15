@@ -2,8 +2,7 @@ import { randomBytes } from 'node:crypto'
 import type { SQLValue } from 'node:sqlite'
 import { getDb, transaction } from './db'
 import { recordConsent } from './consent'
-import { getProduct } from '@/lib/products'
-import { COUNTRY_OF_ORIGIN, getProductImpact } from '@/lib/product-impact'
+import { getActiveProduct, getImpactBySlug } from './catalog'
 import { TERMS_VERSION } from '@/lib/legal'
 import {
   AddressInput,
@@ -47,7 +46,7 @@ export function createOrder(userId: number, lines: CartLine[], address: AddressI
 
   const items: OrderItem[] = []
   for (const [slug, quantity] of Array.from(merged)) {
-    const product = getProduct(slug)
+    const product = getActiveProduct(slug)
     if (!product) throw new OrderError(400, `Product "${slug}" is no longer available. Remove it from your cart and try again.`)
     if (!product.inStock) throw new OrderError(409, `${product.name} is out of stock. Remove it from your cart to continue.`)
     if (!Number.isInteger(quantity) || quantity < 1) throw new OrderError(400, `Invalid quantity for ${product.name}`)
@@ -58,7 +57,7 @@ export function createOrder(userId: number, lines: CartLine[], address: AddressI
       productName: product.name,
       vendor: product.vendor,
       vendorLocation: product.vendorLocation,
-      countryOfOrigin: COUNTRY_OF_ORIGIN,
+      countryOfOrigin: product.countryOfOrigin ?? 'India',
       category: product.categoryLabel,
       unitPrice: product.price,
       gstRate: product.gstRate,
@@ -116,6 +115,13 @@ export function recordPaymentOutcome(userId: number, orderId: string, outcome: P
 
   transaction(db => {
     if (outcome === 'success') {
+      const takeStock = db.prepare(`UPDATE products SET stock_count = stock_count - ? WHERE slug = ? AND stock_count >= ?`)
+      for (const item of order.items) {
+        const result = takeStock.run(item.quantity, item.productSlug, item.quantity)
+        if (Number(result.changes) === 0) {
+          throw new OrderError(409, `${item.productName} no longer has ${item.quantity} in stock. Nothing was charged; please adjust your cart.`)
+        }
+      }
       db.prepare(`UPDATE orders SET status = 'paid', payment_method = ?, paid_at = ? WHERE id = ?`).run(method, new Date().toISOString(), orderId)
       addEvent(orderId, 'paid', `Payment received via ${method} (simulated — no money moved)`, db)
     } else if (outcome === 'failed') {
@@ -230,13 +236,14 @@ export function computeImpactForUser(userId: number): ImpactSummary {
     paidOrders: 0, itemsBought: 0, vendorsSupported: 0, amountSpent: 0,
     plasticAvoidedG: 0, waterSavedL: 0, wasteDivertedG: 0, byCategory: [], byOrder: [],
   }
+  const impactBySlug = getImpactBySlug(Array.from(new Set(rows.map(r => str(r.product_slug)))))
   const vendors = new Set<string>()
   const categories = new Map<string, ImpactSummary['byCategory'][number]>()
   const orders = new Map<string, ImpactSummary['byOrder'][number]>()
 
   for (const r of rows) {
     const quantity = Number(r.quantity)
-    const impact = getProductImpact(str(r.product_slug))
+    const impact = impactBySlug.get(str(r.product_slug)) ?? { plasticAvoidedG: 0, waterSavedL: 0, wasteDivertedG: 0 }
     const plastic = impact.plasticAvoidedG * quantity
     const water = impact.waterSavedL * quantity
     const waste = impact.wasteDivertedG * quantity

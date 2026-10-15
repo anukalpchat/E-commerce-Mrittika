@@ -8,16 +8,16 @@ import { formatPrice } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 import ProductCard from '@/components/ProductCard'
 import WishlistButton from '@/components/WishlistButton'
-import { COUNTRY_OF_ORIGIN } from '@/lib/product-impact'
 
 interface Props {
   product: Product
   basePrice: number
   gstAmount: number
   related: Product[]
+  vendorVerified: boolean
 }
 
-export default function ProductDetailClient({ product, basePrice, gstAmount, related }: Props) {
+export default function ProductDetailClient({ product, basePrice, gstAmount, related, vendorVerified }: Props) {
   const { addItem } = useCart()
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
@@ -75,6 +75,11 @@ export default function ProductDetailClient({ product, basePrice, gstAmount, rel
               <h1 className="font-display text-3xl md:text-4xl text-ink leading-tight">{product.name}</h1>
               <p className="text-mist font-sans text-sm mt-1">
                 by <span className="text-ink">{product.vendor}</span> · {product.vendorLocation}
+                {vendorVerified && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-[11px] uppercase tracking-widest text-canopy border border-canopy/40 bg-canopy/5 px-1.5 py-0.5 rounded-sm align-middle" title="This vendor's application and documents were reviewed by Mrittika">
+                    ✓ Verified vendor
+                  </span>
+                )}
               </p>
             </div>
 
@@ -133,7 +138,7 @@ export default function ProductDetailClient({ product, basePrice, gstAmount, rel
               <WishlistButton slug={product.slug} />
             </div>
             <p className="text-xs font-sans text-mist">
-              Sold by <span className="text-ink">{product.vendor}</span>, {product.vendorLocation} · Country of origin: <span className="text-ink">{COUNTRY_OF_ORIGIN}</span>
+              Sold by <span className="text-ink">{product.vendor}</span>, {product.vendorLocation} · Country of origin: <span className="text-ink">{product.countryOfOrigin ?? 'India'}</span>
             </p>
 
             {/* Certifications */}

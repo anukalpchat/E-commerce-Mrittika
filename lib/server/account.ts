@@ -1,5 +1,6 @@
 import { getDb } from './db'
-import { getProduct, type Product } from '@/lib/products'
+import type { Product } from '@/lib/products'
+import { getActiveProduct } from './catalog'
 import type { AddressInput, SavedAddress } from '@/lib/orders-shared'
 
 const MAX_SAVED_ADDRESSES = 10
@@ -57,7 +58,7 @@ export function listWishlist(userId: number): Product[] {
   return getDb()
     .prepare(`SELECT product_slug FROM wishlist WHERE user_id = ? ORDER BY created_at DESC`)
     .all(userId)
-    .map(r => getProduct(String(r.product_slug)))
+    .map(r => getActiveProduct(String(r.product_slug)))
     .filter((p): p is Product => p !== undefined)
 }
 

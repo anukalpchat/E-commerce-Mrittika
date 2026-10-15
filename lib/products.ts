@@ -19,6 +19,8 @@ export interface Product {
   imageColor: string   // tailwind bg color fallback
   imageUrl: string     // Unsplash CDN URL
   tags: string[]
+  /** Set for catalogue entries read from the database; the static seed list below omits it. */
+  countryOfOrigin?: string
 }
 
 export const products: Product[] = [

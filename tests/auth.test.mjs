@@ -1,9 +1,8 @@
-// Integration tests against a running server: start `npm run dev` (or `npm start`) first.
-// BASE_URL defaults to http://localhost:3000.
+// Integration tests: start `npm run test:server` (port 3100, throwaway database) first.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000'
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3100'
 const uniqueEmail = label => `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`
 
 async function post(path, body, cookie) {

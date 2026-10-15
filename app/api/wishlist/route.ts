@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getProduct } from '@/lib/products'
+import { getActiveProduct } from '@/lib/server/catalog'
 import { addToWishlist, listWishlist, removeFromWishlist } from '@/lib/server/account'
 import { getCurrentUser } from '@/lib/server/auth'
 import { errorResponse, readJsonObject, stringField, unauthorized } from '@/lib/server/http'
@@ -15,7 +15,7 @@ export async function GET() {
 async function readSlug(request: Request): Promise<string | null> {
   const body = await readJsonObject(request)
   const slug = body ? stringField(body, 'slug') : ''
-  return getProduct(slug) ? slug : null
+  return getActiveProduct(slug) ? slug : null
 }
 
 export async function POST(request: Request) {

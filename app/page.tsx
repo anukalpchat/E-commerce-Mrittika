@@ -1,13 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { products, categories, formatPrice } from '@/lib/products'
+import { categories as categoryMeta, formatPrice } from '@/lib/products'
+import { listActiveProducts } from '@/lib/server/catalog'
 import ProductCard from '@/components/ProductCard'
 
 export const metadata: Metadata = { title: 'Mrittika — Verified Sustainable Goods' }
 
-const featured = products.filter(p => p.sustainabilityScore >= 90).slice(0, 4)
+export const dynamic = 'force-dynamic'
 
 export default function HomePage() {
+  const products = listActiveProducts()
+  const featured = products.filter(p => p.sustainabilityScore >= 90).slice(0, 4)
+  const categories = categoryMeta.map(c => ({ ...c, count: products.filter(p => p.category === c.slug).length }))
   return (
     <main className="min-h-screen bg-vellum">
       {/* Hero */}

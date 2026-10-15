@@ -46,6 +46,14 @@ export default function AccountShell({ user, active, children }: { user: PublicU
               </li>
             ))}
           </ul>
+          {(user.role === 'vendor' || user.role === 'admin') && (
+            <Link
+              href={user.role === 'admin' ? '/admin' : '/vendor/dashboard'}
+              className="mt-4 hidden md:block text-xs font-sans uppercase tracking-widest border border-gold/60 text-gold px-3 py-2 rounded-sm hover:bg-gold hover:text-forest transition-colors"
+            >
+              {user.role === 'admin' ? 'Admin Panel →' : 'Vendor Dashboard →'}
+            </Link>
+          )}
         </nav>
         <div className="flex-1 min-w-0">{children}</div>
       </div>

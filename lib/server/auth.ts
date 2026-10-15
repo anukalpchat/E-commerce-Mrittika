@@ -1,34 +1,14 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { cookies } from 'next/headers'
 import type { SQLValue } from 'node:sqlite'
 import { getDb } from './db'
+import { hashPassword } from './password'
 import type { PublicUser, Role } from '@/lib/auth-types'
+
+export { hashPassword, verifyPassword } from './password'
 
 export const SESSION_COOKIE = 'mrittika_session'
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
-const KEY_LENGTH = 64
-
-function scryptAsync(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    scrypt(password, salt, keyLength, (err, key) => (err ? reject(err) : resolve(key)))
-  })
-}
-
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16)
-  const key = await scryptAsync(password, salt, KEY_LENGTH)
-  return `scrypt$${salt.toString('hex')}$${key.toString('hex')}`
-}
-
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [scheme, saltHex, keyHex] = stored.split('$')
-  if (scheme !== 'scrypt' || !saltHex || !keyHex) {
-    throw new Error(`Unrecognised password hash format (scheme "${scheme}"); expected scrypt$salt$key`)
-  }
-  const expected = Buffer.from(keyHex, 'hex')
-  const actual = await scryptAsync(password, Buffer.from(saltHex, 'hex'), expected.length)
-  return timingSafeEqual(actual, expected)
-}
 
 // Login hashes against this when the email is unknown, so response time does not reveal which emails have accounts.
 let dummyHash: Promise<string> | undefined
