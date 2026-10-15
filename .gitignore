@@ -1,0 +1,18 @@
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+*.tsbuildinfo
+
+# env files (commit only the example)
+.env*
+!.env.example
+
+# local SQLite database
+data/
+
+# OS / editor
+.DS_Store
+.claude/settings.local.json

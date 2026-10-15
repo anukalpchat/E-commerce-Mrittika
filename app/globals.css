@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-vellum:    #FAF5EE;
+  --color-forest:    #0D1F14;
+  --color-ink:       #1C1107;
+  --color-sienna:    #B5421A;
+  --color-canopy:    #3D6E35;
+  --color-gold:      #C9924A;
+  --color-mist:      #8C7B6A;
+  --color-sand:      #D6C4A8;
+  --color-parchment: #EDE5D5;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-vellum);
+  color: var(--color-ink);
+}
+
+/* Legal page prose */
+.prose-legal {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  color: var(--color-ink);
+}
+
+.prose-legal h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-top: 3rem;
+  margin-bottom: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-sand);
+  scroll-margin-top: 6rem;
+}
+
+.prose-legal h2:first-child {
+  margin-top: 0;
+}
+
+.prose-legal h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  scroll-margin-top: 6rem;
+}
+
+.prose-legal p {
+  margin-bottom: 1rem;
+  color: var(--color-ink);
+}
+
+.prose-legal ul,
+.prose-legal ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose-legal li {
+  margin-bottom: 0.375rem;
+}
+
+.prose-legal ul li {
+  list-style-type: disc;
+}
+
+.prose-legal ol li {
+  list-style-type: decimal;
+}
+
+.prose-legal a {
+  color: var(--color-sienna);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-legal a:hover {
+  color: var(--color-ink);
+}
+
+.prose-legal strong {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.prose-legal .legal-note {
+  background: var(--color-parchment);
+  border-left: 3px solid var(--color-gold);
+  padding: 0.875rem 1rem;
+  margin: 1.5rem 0;
+  font-size: 0.875rem;
+  color: var(--color-mist);
+}
+
+/* Section divider */
+.divider-gold {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 2.5rem 0;
+  color: var(--color-gold);
+  opacity: 0.6;
+}
+
+.divider-gold::before,
+.divider-gold::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-gold);
+}
+
+/* Pending badge */
+.badge-pending {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
