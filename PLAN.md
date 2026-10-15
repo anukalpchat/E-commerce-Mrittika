@@ -41,7 +41,7 @@ Supporting (outside the 15): Terms, Privacy, Disclaimer, Returns & Shipping, Gri
 
 Effort: S = under an hour, M = a few hours, L = most of a day.
 
-- [ ] **T1 — Auth + consent foundation (L).** SQLite layer, users/sessions/consents tables, register/login/logout/me API, `/auth` page with unchecked T&C checkbox that blocks submit (client and server), consent row with user ID, timestamp and policy version, header shows signed-in state, consent records visible after sign-up.
+- [x] **T1 — Auth + consent foundation (L).** SQLite layer, users/sessions/consents tables, register/login/logout/me API, `/auth` page with unchecked T&C checkbox that blocks submit (client and server), consent row with user ID, timestamp and policy version, header shows signed-in state, consent records visible after sign-up.
 - [ ] **T2 — Privacy Policy + Returns & Shipping policy (M).** Draft final text (DPDP Act 2023 notice items, retention, rights, grievance contact), cookie/data notice banner, add privacy consent at registration once the policy exists.
 - [ ] **T3 — Server-side orders + checkout consent (L).** Orders and order_items tables, server recomputes prices from the catalogue (never trusts client totals), GST breakdown, checkout requires sign-in, T&C consent recorded with context `checkout`, mock payment labelled as simulation, success/failed/cancelled outcomes stored on the order.
 - [ ] **T4 — Order confirmation, tracking and invoice (M).** `/orders/[id]` reads the stored order (no more query-string totals), status timeline, printable GST invoice with seller details and country of origin.

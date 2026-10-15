@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useCart } from '@/lib/cart-context'
+import { useAuth } from '@/lib/auth-context'
 
 const nav = [
   { label: 'Shop', href: '/categories' },
@@ -14,6 +15,10 @@ const nav = [
 export default function Header() {
   const [open, setOpen] = useState(false)
   const { itemCount } = useCart()
+  const { user, status } = useAuth()
+  const accountLabel = user ? user.name.split(' ')[0] : 'Sign In'
+  // Hidden (not removed) while the session loads so the header does not shift when it resolves.
+  const accountVisibility = status === 'loading' ? 'invisible' : ''
 
   return (
     <header className="bg-forest text-vellum border-b border-canopy/40">
@@ -61,9 +66,10 @@ export default function Header() {
           </Link>
           <Link
             href="/auth"
-            className="hidden md:inline-block text-xs font-sans uppercase tracking-widest border border-gold/60 text-gold hover:bg-gold hover:text-forest transition-colors px-4 py-1.5"
+            className={`hidden md:inline-block text-xs font-sans uppercase tracking-widest border border-gold/60 text-gold hover:bg-gold hover:text-forest transition-colors px-4 py-1.5 ${accountVisibility}`}
+            aria-label={user ? `Account for ${user.name}` : 'Sign in'}
           >
-            Sign In
+            {accountLabel}
           </Link>
           {/* Mobile toggle */}
           <button
@@ -102,8 +108,8 @@ export default function Header() {
                 </span>
               )}
             </Link>
-            <Link href="/auth" className="text-gold text-sm font-medium hover:text-vellum" onClick={() => setOpen(false)}>
-              Sign In
+            <Link href="/auth" className={`text-gold text-sm font-medium hover:text-vellum ${accountVisibility}`} onClick={() => setOpen(false)}>
+              {accountLabel}
             </Link>
           </div>
         </nav>

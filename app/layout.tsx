@@ -4,6 +4,7 @@ import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { CartProvider } from '@/lib/cart-context'
+import { AuthProvider } from '@/lib/auth-context'
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -31,11 +32,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body className="flex flex-col min-h-screen font-sans antialiased">
-        <CartProvider>
-          <Header />
-          <div className="flex-1">{children}</div>
-          <Footer />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Header />
+            <div className="flex-1">{children}</div>
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

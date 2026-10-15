@@ -1,19 +1,27 @@
 import type { Metadata } from 'next'
-import PlaceholderPage from '@/components/PlaceholderPage'
+import { Suspense } from 'react'
+import AuthClient from './AuthClient'
 
 export const metadata: Metadata = { title: 'Sign In / Register' }
 
 export default function AuthPage() {
   return (
-    <PlaceholderPage
-      title="Sign In / Register"
-      description="User authentication — login for returning users, and registration for new buyers. Separate vendor registration flow at /vendor/register."
-      sections={[
-        { title: 'Sign In', description: 'Email + password login with "Forgot password" link.' },
-        { title: 'Register', description: 'New buyer account: name, email, phone, password. Minimum age 18 check.' },
-        { title: 'T&C Acceptance', description: 'Mandatory T&C checkbox at registration (click-wrap, separate from vendor acceptance).' },
-        { title: 'Social Auth', description: 'Optional Google / phone OTP sign-in (planned for later sprint).' },
-      ]}
-    />
+    <main className="min-h-screen bg-vellum">
+      <div className="bg-parchment border-b border-sand">
+        <div className="max-w-7xl mx-auto px-6 py-10">
+          <p className="text-gold font-sans text-xs uppercase tracking-widest mb-2">Account</p>
+          <h1 className="font-display text-4xl text-ink">Your Mrittika Account</h1>
+        </div>
+      </div>
+      <div className="max-w-xl mx-auto px-6 py-12">
+        <Suspense fallback={<AuthSkeleton />}>
+          <AuthClient />
+        </Suspense>
+      </div>
+    </main>
   )
+}
+
+function AuthSkeleton() {
+  return <div className="h-96 bg-parchment border border-sand rounded-sm animate-pulse" aria-hidden="true" />
 }
