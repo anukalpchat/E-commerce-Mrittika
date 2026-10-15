@@ -3,9 +3,14 @@ import { products as seedProducts } from '@/lib/products'
 import { COUNTRY_OF_ORIGIN, getProductImpact } from '@/lib/product-impact'
 import { hashPasswordSync } from './password'
 
-// Local demo logins, listed in the README. Only created outside production unless explicitly enabled,
-// so a deployed copy never ships with known passwords.
+/**
+ * Demo mode: seeded demo logins and the one-click account switcher. On by default outside production,
+ * so a real deployment never ships known passwords or a login shortcut unless explicitly enabled.
+ */
+export const DEMO_MODE = process.env.NODE_ENV !== 'production' || process.env.SEED_DEMO_ACCOUNTS === 'true'
+
 export const DEMO_ACCOUNTS = {
+  buyer: { email: 'buyer@mrittika.test', password: 'DemoBuyer@2026', name: 'Priya Nair' },
   admin: { email: 'admin@mrittika.test', password: 'MrittikaAdmin@2026', name: 'Mrittika Admin' },
   vendor: { email: 'vendor@mrittika.test', password: 'AranyaVendor@2026', name: 'Lakshmi Iyer', business: 'Aranya Botanicals' },
 }
@@ -73,8 +78,7 @@ function seedCatalogue(db: DatabaseSync): void {
 }
 
 function seedDemoAccounts(db: DatabaseSync): void {
-  const enabled = process.env.NODE_ENV !== 'production' || process.env.SEED_DEMO_ACCOUNTS === 'true'
-  if (!enabled) return
+  if (!DEMO_MODE) return
 
   const ensureUser = (email: string, name: string, password: string, role: string): number => {
     const existing = db.prepare(`SELECT id FROM users WHERE email = ?`).get(email)
@@ -85,14 +89,15 @@ function seedDemoAccounts(db: DatabaseSync): void {
     return Number(row?.id)
   }
 
-  const { admin, vendor } = DEMO_ACCOUNTS
+  const { admin, vendor, buyer } = DEMO_ACCOUNTS
+  ensureUser(buyer.email, buyer.name, buyer.password, 'buyer')
   ensureUser(admin.email, admin.name, admin.password, 'admin')
   const vendorUserId = ensureUser(vendor.email, vendor.name, vendor.password, 'vendor')
   db.prepare(`UPDATE vendors SET user_id = ? WHERE business_name = ? AND user_id IS NULL`).run(vendorUserId, vendor.business)
 }
 
 /** Changes whenever the seed catalogue does, so a running dev server knows to seed again. */
-export const SEED_FINGERPRINT = seedProducts.map(p => p.slug).join(',')
+export const SEED_FINGERPRINT = [...seedProducts.map(p => p.slug), ...Object.values(DEMO_ACCOUNTS).map(a => a.email)].join(',')
 
 export function seedDatabase(db: DatabaseSync): void {
   seedCatalogue(db)

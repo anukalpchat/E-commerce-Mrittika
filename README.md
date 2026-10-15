@@ -52,10 +52,13 @@ Created automatically on first start (not in production unless `SEED_DEMO_ACCOUN
 
 | Role | Email | Password | Opens |
 |---|---|---|---|
+| Buyer | `buyer@mrittika.test` | `DemoBuyer@2026` | `/account` |
 | Admin | `admin@mrittika.test` | `MrittikaAdmin@2026` | `/admin` |
 | Vendor (Aranya Botanicals) | `vendor@mrittika.test` | `AranyaVendor@2026` | `/vendor/dashboard` |
 
-Buyers register themselves at `/auth?tab=register`.
+Buyers can also register themselves at `/auth?tab=register`.
+
+**Demo quick switch:** in demo mode you never need to type these passwords. The sign-in page offers one-click *Buyer / Vendor / Admin* buttons, and once signed in, clicking your name in the header opens a menu with the same switch. If you were signed in to your own account, the menu also shows *← Back to (your name)*, which returns you to it without signing in again. Demo mode is on in development and off in production unless `SEED_DEMO_ACCOUNTS=true`, so a real deployment has no login shortcut.
 
 The catalogue (30 products from 25 vendors) is seeded into the database from `lib/products.ts`. Products added to that file later are inserted automatically on the next request; existing rows are never overwritten.
 
@@ -110,12 +113,17 @@ To try it: add a product to the cart → `/checkout` → sign in → fill the ad
 
 ## Demo walkthrough (for the viva)
 
-1. **Buyer:** register at `/auth?tab=register` (two unchecked consent boxes) → add products → `/checkout` → place the order → choose *Payment fails*, then *Try again* with *Payment succeeds* → order page with timeline and GST invoice → `/account/impact`.
-2. **Search:** `/search?impact=water`, or search “GOTS” or “Kerala”.
-3. **Vendor:** sign in as `vendor@mrittika.test` → `/vendor/dashboard` → mark the new order shipped and delivered → *Payouts* shows the 10% commission.
-4. **New vendor:** register another account → `/vendor/register` → apply → as admin, approve in `/admin?tab=vendors` → the new vendor adds a product with a photo → as admin, score it in `/admin?tab=products` → it appears in the shop.
-5. **Grievance:** send a *Formal grievance* from `/contact` → it appears at the top of `/admin?tab=support` with its 48-hour deadline → resolve it with a note → the customer sees the resolution under *Support Tickets*.
-6. **Compliance evidence:** `/admin?tab=consents` lists every Terms and Privacy acceptance with version, context, time and IP.
+Run `npm run dev`, open http://localhost:3000, and switch roles from the name menu in the header — no passwords needed.
+
+1. **Shop:** home → *Shop* → a product page (score, GST split, verified vendor, country of origin).
+2. **Search:** `/search` → *Saves water*, or search “GOTS”.
+3. **Register live:** `/auth` → *Create Account* — show the two unchecked consent boxes and that submit is blocked without them.
+4. **Buy:** add products → *Checkout* → *Place Order & Pay* → choose *Payment fails*, then *Try Again* with *Payment succeeds* → order page with timeline and GST invoice → `/account/impact`.
+5. **Vendor:** name menu → *Vendor* → *Orders* → mark the order shipped, then delivered → *Payouts* (10% commission) → *Products* → add a product with a photo.
+6. **Admin:** name menu → *Admin* → *Products*: score the new product (60+) and approve → it appears in the shop. Show *Vendors*, *Consent Log* and *Support & Grievances*.
+7. **Back to the buyer:** name menu → *← Back to (your name)*; the order now shows *Delivered*.
+8. **Grievance:** `/contact` → *Formal grievance* → as Admin, resolve it → as the buyer, see the resolution under *Support Tickets*.
+9. **Legal & content:** `/privacy`, `/returns-shipping`, `/terms`, `/sustainability`, `/about`, `/journal`.
 
 ## Demo data notes
 

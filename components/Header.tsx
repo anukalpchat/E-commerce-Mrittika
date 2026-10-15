@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useCart } from '@/lib/cart-context'
 import { useAuth } from '@/lib/auth-context'
+import AccountMenu from './AccountMenu'
+import DemoSwitcher from './DemoSwitcher'
 
 const nav = [
   { label: 'Shop', href: '/categories' },
@@ -65,13 +67,9 @@ export default function Header() {
               </span>
             )}
           </Link>
-          <Link
-            href={accountHref}
-            className={`hidden md:inline-block text-xs font-sans uppercase tracking-widest border border-gold/60 text-gold hover:bg-gold hover:text-forest transition-colors px-4 py-1.5 ${accountVisibility}`}
-            aria-label={user ? `Account for ${user.name}` : 'Sign in'}
-          >
-            {accountLabel}
-          </Link>
+          <div className="hidden md:block">
+            <AccountMenu />
+          </div>
           {/* Mobile toggle */}
           <button
             className="md:hidden text-sand hover:text-vellum text-xl leading-none"
@@ -113,6 +111,11 @@ export default function Header() {
               {accountLabel}
             </Link>
           </div>
+          {user && (
+            <div className="px-3 pb-4 border-t border-canopy/20 pt-3">
+              <DemoSwitcher tone="dark" />
+            </div>
+          )}
         </nav>
       )}
     </header>

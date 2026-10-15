@@ -13,11 +13,12 @@ import {
   validateRegistration,
 } from '@/lib/auth-validation'
 import { PRIVACY_LAST_UPDATED, TERMS_LAST_UPDATED } from '@/lib/legal'
+import DemoSwitcher from '@/components/DemoSwitcher'
 
 type Tab = 'login' | 'register'
 
 export default function AuthClient() {
-  const { user, status } = useAuth()
+  const { user, status, demo } = useAuth()
   const params = useSearchParams()
   const [tab, setTab] = useState<Tab>(params.get('tab') === 'register' ? 'register' : 'login')
   const next = safeRedirectPath(params.get('next'))
@@ -32,21 +33,32 @@ export default function AuthClient() {
   }
 
   return (
-    <div className="bg-parchment border border-sand rounded-sm">
-      <div role="tablist" aria-label="Sign in or register" className="grid grid-cols-2 border-b border-sand">
-        <TabButton active={tab === 'login'} onClick={() => setTab('login')} controls="panel-login">
-          Sign In
-        </TabButton>
-        <TabButton active={tab === 'register'} onClick={() => setTab('register')} controls="panel-register">
-          Create Account
-        </TabButton>
-      </div>
-      <div className="p-6 md:p-8">
-        {tab === 'login' ? (
-          <LoginForm onSwitch={() => setTab('register')} />
-        ) : (
-          <RegisterForm onSwitch={() => setTab('login')} />
-        )}
+    <div className="space-y-6">
+      {demo.enabled && (
+        <div className="bg-amber-50 border border-amber-300 rounded-sm p-4">
+          <p className="text-xs font-sans text-amber-900 mb-2">
+            <strong>Presenting?</strong> Skip typing passwords: continue as one of the demo accounts. You can switch any time from
+            the name menu in the header.
+          </p>
+          <DemoSwitcher />
+        </div>
+      )}
+      <div className="bg-parchment border border-sand rounded-sm">
+        <div role="tablist" aria-label="Sign in or register" className="grid grid-cols-2 border-b border-sand">
+          <TabButton active={tab === 'login'} onClick={() => setTab('login')} controls="panel-login">
+            Sign In
+          </TabButton>
+          <TabButton active={tab === 'register'} onClick={() => setTab('register')} controls="panel-register">
+            Create Account
+          </TabButton>
+        </div>
+        <div className="p-6 md:p-8">
+          {tab === 'login' ? (
+            <LoginForm onSwitch={() => setTab('register')} />
+          ) : (
+            <RegisterForm onSwitch={() => setTab('login')} />
+          )}
+        </div>
       </div>
     </div>
   )
