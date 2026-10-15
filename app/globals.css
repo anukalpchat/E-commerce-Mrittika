@@ -141,3 +141,19 @@ body {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Printing an order page should produce just the invoice */
+@media print {
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .print-area {
+    border: none !important;
+    padding: 0 !important;
+  }
+}

@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, ReactNode, useState } from 'react'
+import { FormEvent, ReactNode, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
@@ -21,11 +21,15 @@ export default function AuthClient() {
   const params = useSearchParams()
   const [tab, setTab] = useState<Tab>(params.get('tab') === 'register' ? 'register' : 'login')
   const next = safeRedirectPath(params.get('next'))
+  const router = useRouter()
 
-  if (status === 'loading') {
+  useEffect(() => {
+    if (user) router.replace(next ?? '/account')
+  }, [user, next, router])
+
+  if (status === 'loading' || user) {
     return <div className="h-96 bg-parchment border border-sand rounded-sm animate-pulse" aria-hidden="true" />
   }
-  if (user) return <SignedInView />
 
   return (
     <div className="bg-parchment border border-sand rounded-sm">
@@ -39,9 +43,9 @@ export default function AuthClient() {
       </div>
       <div className="p-6 md:p-8">
         {tab === 'login' ? (
-          <LoginForm next={next} onSwitch={() => setTab('register')} />
+          <LoginForm onSwitch={() => setTab('register')} />
         ) : (
-          <RegisterForm next={next} onSwitch={() => setTab('login')} />
+          <RegisterForm onSwitch={() => setTab('login')} />
         )}
       </div>
     </div>
@@ -80,17 +84,14 @@ async function postJson(url: string, body: unknown): Promise<{ ok: true } | { ok
   }
 }
 
-function useAfterAuth(next: string | null) {
+// Refreshing the session flips AuthClient into its signed-in state, which redirects to `next` or /account.
+function useAfterAuth() {
   const { refresh } = useAuth()
-  const router = useRouter()
-  return async () => {
-    await refresh()
-    if (next) router.push(next)
-  }
+  return refresh
 }
 
-function LoginForm({ next, onSwitch }: { next: string | null; onSwitch: () => void }) {
-  const afterAuth = useAfterAuth(next)
+function LoginForm({ onSwitch }: { onSwitch: () => void }) {
+  const afterAuth = useAfterAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -135,8 +136,8 @@ function LoginForm({ next, onSwitch }: { next: string | null; onSwitch: () => vo
   )
 }
 
-function RegisterForm({ next, onSwitch }: { next: string | null; onSwitch: () => void }) {
-  const afterAuth = useAfterAuth(next)
+function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
+  const afterAuth = useAfterAuth()
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' })
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -224,88 +225,6 @@ function RegisterForm({ next, onSwitch }: { next: string | null; onSwitch: () =>
   )
 }
 
-function SignedInView() {
-  const { user, consents, signOut } = useAuth()
-  const router = useRouter()
-  const [signOutError, setSignOutError] = useState('')
-  if (!user) return null
-
-  async function handleSignOut() {
-    setSignOutError('')
-    try {
-      await signOut()
-      router.refresh()
-    } catch (err) {
-      setSignOutError(err instanceof Error ? err.message : 'Sign out failed. Please try again.')
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-parchment border border-sand rounded-sm p-6 md:p-8">
-        <p className="text-xs font-sans text-gold uppercase tracking-widest mb-1">Signed in</p>
-        <h2 className="font-display text-3xl text-ink">{user.name}</h2>
-        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm font-sans">
-          <dt className="text-mist">Email</dt>
-          <dd className="text-ink break-all">{user.email}</dd>
-          <dt className="text-mist">Mobile</dt>
-          <dd className="text-ink">{user.phone ?? '—'}</dd>
-          <dt className="text-mist">Account type</dt>
-          <dd className="text-ink capitalize">{user.role}</dd>
-          <dt className="text-mist">Member since</dt>
-          <dd className="text-ink">{formatDateTime(user.createdAt)}</dd>
-        </dl>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/categories" className="font-sans text-xs uppercase tracking-widest bg-gold text-forest px-6 py-3 hover:bg-sand transition-colors">
-            Continue Shopping
-          </Link>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="font-sans text-xs uppercase tracking-widest border border-sand text-ink px-6 py-3 hover:border-gold transition-colors"
-          >
-            Sign Out
-          </button>
-        </div>
-        {signOutError && <p role="alert" className="mt-3 text-xs text-sienna font-sans">{signOutError}</p>}
-      </div>
-
-      <div className="bg-parchment border border-sand rounded-sm p-6 md:p-8">
-        <h3 className="font-display text-xl text-ink">Your consent records</h3>
-        <p className="mt-1 text-xs text-mist font-sans">
-          Stored on our server each time you accept a policy. Kept as evidence of what you agreed to and when.
-        </p>
-        {consents.length === 0 ? (
-          <p className="mt-4 text-sm text-mist font-sans">No consent records yet.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-xs font-sans">
-              <thead>
-                <tr className="text-left text-mist uppercase tracking-widest border-b border-sand">
-                  <th className="py-2 pr-4 font-normal">Policy</th>
-                  <th className="py-2 pr-4 font-normal">Version</th>
-                  <th className="py-2 pr-4 font-normal">Given at</th>
-                  <th className="py-2 font-normal">Accepted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {consents.map(c => (
-                  <tr key={c.id} className="border-b border-sand/60 text-ink">
-                    <td className="py-2 pr-4 capitalize">{c.policy === 'terms' ? 'Terms & Conditions' : c.policy}</td>
-                    <td className="py-2 pr-4 font-mono">{c.policyVersion}</td>
-                    <td className="py-2 pr-4 capitalize">{c.context.replace('-', ' ')}</td>
-                    <td className="py-2">{formatDateTime(c.acceptedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function Field({ id, label, error, hint, children }: { id: string; label: string; error?: string; hint?: string; children: ReactNode }) {
   return (
     <div>
@@ -348,8 +267,4 @@ function SubmitButton({ submitting, label, busyLabel }: { submitting: boolean; l
       {submitting ? busyLabel : label}
     </button>
   )
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }

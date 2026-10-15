@@ -2,21 +2,29 @@
 
 import { useState } from 'react'
 import { formatPrice } from '@/lib/products'
+import type { PaymentOutcome } from '@/lib/orders-shared'
 
 type PaymentTab = 'upi' | 'card' | 'netbanking'
-type Stage = 'form' | 'processing' | 'success'
+type Stage = 'form' | 'processing' | 'success' | 'failed'
 
+// SIMULATED PAYMENT. No gateway is called and nothing typed here leaves the browser except a
+// method label (e.g. "Card ···· 4242"). The chosen demo outcome is reported to the order API.
 interface Props {
+  orderId: string
   total: number
-  onSuccess: (method: string) => void
-  onClose: () => void
+  /** Records the outcome on the order; resolves to an error message, or null on success. */
+  onOutcome: (outcome: PaymentOutcome, method: string) => Promise<string | null>
+  onViewOrder: () => void
+  onCancel: () => void
 }
 
 const BANKS = ['State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank', 'Punjab National Bank', 'Bank of Baroda', 'Canara Bank']
 
-export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
+export default function MockPaymentModal({ orderId, total, onOutcome, onViewOrder, onCancel }: Props) {
   const [tab, setTab] = useState<PaymentTab>('upi')
   const [stage, setStage] = useState<Stage>('form')
+  const [simulate, setSimulate] = useState<'success' | 'failed'>('success')
+  const [apiError, setApiError] = useState('')
 
   // UPI state
   const [upiId, setUpiId] = useState('')
@@ -62,9 +70,18 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
       setBankError('')
     }
 
-    // Start mock processing
+    setApiError('')
     setStage('processing')
-    setTimeout(() => setStage('success'), 2800)
+    // Short pause so the demo feels like a payment round-trip.
+    setTimeout(async () => {
+      const error = await onOutcome(simulate, getMethodLabel())
+      if (error) {
+        setApiError(error)
+        setStage('form')
+        return
+      }
+      setStage(simulate === 'success' ? 'success' : 'failed')
+    }, 1500)
   }
 
   function getMethodLabel() {
@@ -74,16 +91,19 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" role="dialog" aria-modal="true" aria-labelledby="payment-title">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto">
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-xs font-sans px-6 py-2 text-center">
+          <strong>Simulated payment</strong> — no money is charged and no gateway is contacted.
+        </div>
         {/* Modal header */}
         <div className="bg-forest text-vellum px-6 py-4 flex items-center justify-between">
           <div>
-            <p className="font-sans text-xs text-sand/70 uppercase tracking-widest">Mrittika Secure Checkout</p>
+            <p id="payment-title" className="font-sans text-xs text-sand/70 uppercase tracking-widest">Order {orderId}</p>
             <p className="font-display text-2xl text-gold mt-0.5">{formatPrice(total)}</p>
           </div>
           {stage === 'form' && (
-            <button onClick={onClose} className="text-sand/60 hover:text-vellum text-xl leading-none" aria-label="Close">✕</button>
+            <button onClick={onCancel} className="text-sand/60 hover:text-vellum text-xl leading-none" aria-label="Cancel payment">✕</button>
           )}
         </div>
 
@@ -94,8 +114,8 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
               <div className="absolute inset-0 border-4 border-sand rounded-full" />
               <div className="absolute inset-0 border-4 border-t-canopy rounded-full animate-spin" />
             </div>
-            <p className="font-display text-xl text-ink">Processing Payment…</p>
-            <p className="text-xs text-mist font-sans text-center">Please do not close this window.<br />Your payment is being verified.</p>
+            <p className="font-display text-xl text-ink">Simulating payment…</p>
+            <p className="text-xs text-mist font-sans text-center">Recording the outcome on your order.</p>
           </div>
         )}
 
@@ -110,11 +130,39 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
               <p className="text-mist font-sans text-sm mt-2">{formatPrice(total)} paid via {getMethodLabel()}</p>
             </div>
             <button
-              onClick={() => onSuccess(getMethodLabel())}
+              onClick={onViewOrder}
+              autoFocus
               className="w-full mt-2 font-sans text-sm uppercase tracking-widest bg-canopy text-vellum px-6 py-3 hover:bg-forest transition-colors"
             >
-              View Order Confirmation →
+              View Order →
             </button>
+          </div>
+        )}
+
+        {stage === 'failed' && (
+          <div className="px-6 py-12 flex flex-col items-center gap-5 bg-white text-center">
+            <div className="w-16 h-16 bg-sienna rounded-full flex items-center justify-center">
+              <span className="text-white text-3xl">✕</span>
+            </div>
+            <div>
+              <p className="font-display text-2xl text-ink">Payment Failed</p>
+              <p className="text-mist font-sans text-sm mt-2">Nothing was charged. Your order is saved — you can try again.</p>
+            </div>
+            <div className="w-full flex gap-3">
+              <button
+                onClick={() => setStage('form')}
+                autoFocus
+                className="flex-1 font-sans text-sm uppercase tracking-widest bg-gold text-forest px-4 py-3 hover:bg-sand transition-colors"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={onViewOrder}
+                className="flex-1 font-sans text-sm uppercase tracking-widest border border-sand text-mist px-4 py-3 hover:border-gold hover:text-ink transition-colors"
+              >
+                View Order
+              </button>
+            </div>
           </div>
         )}
 
@@ -157,7 +205,7 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
                     />
                     {upiError && <p className="mt-1 text-xs text-sienna">{upiError}</p>}
                   </div>
-                  <p className="text-xs text-mist font-sans">You will receive a payment request on your UPI app.</p>
+                  <p className="text-xs text-mist font-sans">Demo: no request is sent to any UPI app.</p>
                 </div>
               )}
 
@@ -213,7 +261,7 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
                       {cardErrors.cvv && <p className="mt-1 text-xs text-sienna">{cardErrors.cvv}</p>}
                     </div>
                   </div>
-                  <p className="text-xs text-mist font-sans">🔒 Card details are encrypted and never stored.</p>
+                  <p className="text-xs text-mist font-sans">Demo: card details stay in this browser window and are never sent to our server.</p>
                 </div>
               )}
 
@@ -243,9 +291,23 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
                     </select>
                     {bankError && <p className="mt-1 text-xs text-sienna">{bankError}</p>}
                   </div>
-                  <p className="text-xs text-mist font-sans">You will be redirected to your bank's secure login page.</p>
+                  <p className="text-xs text-mist font-sans">Demo: no bank redirect happens.</p>
                 </div>
               )}
+
+              <fieldset className="border border-dashed border-amber-300 bg-amber-50 rounded-sm px-4 py-3">
+                <legend className="px-1 text-xs font-sans text-amber-900 uppercase tracking-widest">Demo outcome</legend>
+                <div className="flex gap-6 text-sm font-sans text-ink">
+                  {(['success', 'failed'] as const).map(o => (
+                    <label key={o} className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="simulate" value={o} checked={simulate === o} onChange={() => setSimulate(o)} className="accent-canopy" />
+                      {o === 'success' ? 'Payment succeeds' : 'Payment fails'}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {apiError && <p role="alert" className="text-xs text-sienna font-sans">{apiError}</p>}
 
               <button
                 onClick={validateAndPay}
@@ -255,7 +317,7 @@ export default function MockPaymentModal({ total, onSuccess, onClose }: Props) {
               </button>
 
               <p className="text-center text-xs text-mist font-sans">
-                🔒 Secured by Mrittika Pay · 256-bit SSL
+                Simulated checkout for the Mrittika lab project
               </p>
             </div>
           </div>

@@ -42,7 +42,7 @@ npm test                                  # terminal 2 (uses http://localhost:30
 BASE_URL=http://localhost:3111 npm test   # if the server runs elsewhere
 ```
 
-Tests create throwaway accounts with `@example.test` emails.
+Tests create throwaway accounts and orders with `@example.test` emails in your local database.
 
 ## Test credentials
 
@@ -50,7 +50,9 @@ There are no seeded accounts yet. Create one at `/auth?tab=register`.
 
 ## Payment
 
-Payment is **simulated**. No gateway is called and no money moves. Card details typed into the payment modal never leave the browser.
+Payment is **simulated**. No gateway is called and no money moves. The payment modal has a *Demo outcome* switch (succeeds / fails); closing it cancels the order. Card details typed into it never leave the browser; only a label such as `UPI · name@upi` is stored on the order.
+
+To try it: add a product to the cart → `/checkout` → sign in → fill the address → tick the T&C box → *Place Order & Pay*.
 
 ## Pages
 
@@ -60,10 +62,11 @@ Payment is **simulated**. No gateway is called and no money moves. Card details 
 | Shop (catalogue) | `/categories` | Working (client-side filters) |
 | Product detail | `/product/[slug]` | Working |
 | Cart | `/cart` | Working (stored in the browser) |
-| Checkout | `/checkout` | Partial: payment simulated, order not stored yet |
-| Order confirmation | `/order-confirmation` | Stub: reads details from the URL |
+| Checkout | `/checkout` | **Working**: sign-in required, saved addresses, T&C consent logged, simulated payment (success / fail / cancel) |
+| Order tracking & invoice | `/orders/[id]` | **Working**: stored order, status timeline, printable GST invoice (`/order-confirmation` redirects here) |
 | Sign in / Register | `/auth` | **Working**: server-side accounts, sessions, T&C consent log |
-| Account / Impact | `/profile` | Placeholder |
+| Account | `/account` | **Working**: profile, orders, addresses, wishlist, consent records (`/profile` redirects here) |
+| Impact dashboard | `/account/impact` | **Working**: totals from paid orders; per-product figures are labelled estimates |
 | Vendor registration | `/vendor/register` | Placeholder |
 | Vendor dashboard | `/vendor/dashboard` | Placeholder |
 | Admin | `/admin` | Placeholder |

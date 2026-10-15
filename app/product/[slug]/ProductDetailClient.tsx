@@ -7,6 +7,8 @@ import type { Product } from '@/lib/products'
 import { formatPrice } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 import ProductCard from '@/components/ProductCard'
+import WishlistButton from '@/components/WishlistButton'
+import { COUNTRY_OF_ORIGIN } from '@/lib/product-impact'
 
 interface Props {
   product: Product
@@ -122,11 +124,17 @@ export default function ProductDetailClient({ product, basePrice, gstAmount, rel
               </Link>
             </div>
 
-            {product.inStock ? (
-              <p className="text-xs font-sans text-canopy">✓ In stock · {product.stockCount} units remaining</p>
-            ) : (
-              <p className="text-xs font-sans text-sienna">✗ Out of stock</p>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {product.inStock ? (
+                <p className="text-xs font-sans text-canopy">✓ In stock · {product.stockCount} units remaining</p>
+              ) : (
+                <p className="text-xs font-sans text-sienna">✗ Out of stock</p>
+              )}
+              <WishlistButton slug={product.slug} />
+            </div>
+            <p className="text-xs font-sans text-mist">
+              Sold by <span className="text-ink">{product.vendor}</span>, {product.vendorLocation} · Country of origin: <span className="text-ink">{COUNTRY_OF_ORIGIN}</span>
+            </p>
 
             {/* Certifications */}
             <div>

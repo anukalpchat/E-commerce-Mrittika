@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { ApiError } from '@/lib/auth-types'
+import type { AddressInput } from '@/lib/orders-shared'
 
 export function errorResponse(status: number, error: string, fieldErrors?: Record<string, string>): NextResponse<ApiError> {
   return NextResponse.json(fieldErrors ? { error, fieldErrors } : { error }, { status })
@@ -18,4 +19,22 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
 export function stringField(body: Record<string, unknown>, key: string): string {
   const value = body[key]
   return typeof value === 'string' ? value : ''
+}
+
+export function addressFromBody(value: unknown): AddressInput | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const v = value as Record<string, unknown>
+  return {
+    name: stringField(v, 'name'),
+    phone: stringField(v, 'phone').trim(),
+    line1: stringField(v, 'line1'),
+    line2: stringField(v, 'line2'),
+    city: stringField(v, 'city'),
+    state: stringField(v, 'state'),
+    pincode: stringField(v, 'pincode').trim(),
+  }
+}
+
+export function unauthorized(): NextResponse<ApiError> {
+  return errorResponse(401, 'Please sign in to continue')
 }

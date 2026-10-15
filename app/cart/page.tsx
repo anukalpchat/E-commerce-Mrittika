@@ -4,11 +4,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useCart } from '@/lib/cart-context'
 import { formatPrice } from '@/lib/products'
+import { shippingFor } from '@/lib/orders-shared'
 
 export default function CartPage() {
   const { items, itemCount, subtotal, removeItem, updateQty, clearCart } = useCart()
 
-  const shipping = subtotal > 999 ? 0 : 89
+  const shipping = shippingFor(subtotal)
   const total = subtotal + shipping
 
   if (itemCount === 0) {

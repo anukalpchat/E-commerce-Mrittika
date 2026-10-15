@@ -17,6 +17,7 @@ export default function Header() {
   const { itemCount } = useCart()
   const { user, status } = useAuth()
   const accountLabel = user ? user.name.split(' ')[0] : 'Sign In'
+  const accountHref = user ? '/account' : '/auth'
   // Hidden (not removed) while the session loads so the header does not shift when it resolves.
   const accountVisibility = status === 'loading' ? 'invisible' : ''
 
@@ -65,7 +66,7 @@ export default function Header() {
             )}
           </Link>
           <Link
-            href="/auth"
+            href={accountHref}
             className={`hidden md:inline-block text-xs font-sans uppercase tracking-widest border border-gold/60 text-gold hover:bg-gold hover:text-forest transition-colors px-4 py-1.5 ${accountVisibility}`}
             aria-label={user ? `Account for ${user.name}` : 'Sign in'}
           >
@@ -108,7 +109,7 @@ export default function Header() {
                 </span>
               )}
             </Link>
-            <Link href="/auth" className={`text-gold text-sm font-medium hover:text-vellum ${accountVisibility}`} onClick={() => setOpen(false)}>
+            <Link href={accountHref} className={`text-gold text-sm font-medium hover:text-vellum ${accountVisibility}`} onClick={() => setOpen(false)}>
               {accountLabel}
             </Link>
           </div>
