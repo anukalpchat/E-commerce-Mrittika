@@ -34,7 +34,7 @@ async function login({ email, password }) {
 async function newUser(label) {
   const email = `${unique(label)}@example.test`
   const { res } = await call('POST', '/api/auth/register', {
-    body: { name: 'Test Person', email, phone: '', password: 'clay-and-kiln-42', acceptTerms: true },
+    body: { name: 'Test Person', email, phone: '', password: 'clay-and-kiln-42', acceptTerms: true, acceptPrivacy: true },
   })
   assert.equal(res.status, 201)
   return { email, cookie: cookieFrom(res) }
@@ -263,6 +263,8 @@ test('multi-vendor fulfilment: order ships only when every vendor ships, then de
   await call('POST', `/api/vendor/orders/${id}`, { cookie: aranya, body: { status: 'delivered' } })
   order = await call('GET', `/orders/${id}`, { cookie: buyer.cookie })
   assert.match(order.data, />Delivered</)
+
+  assert.equal((await call('POST', `/api/orders/${id}/cancel`, { cookie: buyer.cookie })).res.status, 409, 'shipped orders cannot be cancelled')
 
   const stranger = await approvedVendor('fulfil-stranger')
   assert.equal((await call('POST', `/api/vendor/orders/${id}`, { cookie: stranger.cookie, body: { status: 'shipped' } })).res.status, 404)

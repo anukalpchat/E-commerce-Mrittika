@@ -8,6 +8,7 @@ import { formatPrice } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 import ProductCard from '@/components/ProductCard'
 import WishlistButton from '@/components/WishlistButton'
+import { getImageCredit } from '@/lib/image-credits'
 
 interface Props {
   product: Product
@@ -50,22 +51,25 @@ export default function ProductDetailClient({ product, basePrice, gstAmount, rel
       <div className="max-w-7xl mx-auto px-6 pb-14">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Image */}
-          <div className={`${product.imageColor} rounded-sm aspect-square relative overflow-hidden`}>
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
-            {/* Score badge */}
-            <div className="absolute top-4 right-4 z-10">
-              <div className={`${scoreBg} text-white rounded-full w-16 h-16 flex flex-col items-center justify-center shadow-md`}>
-                <span className="font-display text-xl leading-none">{product.sustainabilityScore}</span>
-                <span className="font-sans text-[9px] leading-none mt-0.5">/ 100</span>
+          <div>
+            <div className={`${product.imageColor} rounded-sm aspect-square relative overflow-hidden`}>
+              <Image
+                src={product.imageUrl}
+                alt={product.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+              {/* Score badge */}
+              <div className="absolute top-4 right-4 z-10">
+                <div className={`${scoreBg} text-white rounded-full w-16 h-16 flex flex-col items-center justify-center shadow-md`}>
+                  <span className="font-display text-xl leading-none">{product.sustainabilityScore}</span>
+                  <span className="font-sans text-[9px] leading-none mt-0.5">/ 100</span>
+                </div>
               </div>
             </div>
+            <PhotoCredit imageUrl={product.imageUrl} />
           </div>
 
           {/* Info */}
@@ -206,6 +210,10 @@ export default function ProductDetailClient({ product, basePrice, gstAmount, rel
                 </div>
               ))}
             </div>
+            <p className="mt-5 text-[11px] text-mist font-sans leading-relaxed">
+              Pillar breakdown is illustrative: reviewers currently record only the overall score.{' '}
+              <Link href="/sustainability" className="underline underline-offset-2 hover:text-ink">How scoring works</Link>
+            </p>
           </div>
         </div>
 
@@ -229,5 +237,19 @@ export default function ProductDetailClient({ product, basePrice, gstAmount, rel
         )}
       </div>
     </main>
+  )
+}
+
+function PhotoCredit({ imageUrl }: { imageUrl: string }) {
+  const credit = getImageCredit(imageUrl)
+  if (!credit) return null
+  return (
+    <p className="mt-2 text-[11px] text-mist font-sans">
+      Illustrative photo:{' '}
+      <a href={credit.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-ink">
+        “{credit.title}”
+      </a>
+      {credit.creator && <> by {credit.creator}</>}, {credit.license}
+    </p>
   )
 }

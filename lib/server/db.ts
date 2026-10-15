@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
-import { seedDatabase } from './seed'
+import { SEED_FINGERPRINT, seedDatabase } from './seed'
 
 const NOW = `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
 
@@ -24,6 +24,13 @@ CREATE TABLE IF NOT EXISTS sessions (
   id         TEXT    PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TEXT    NOT NULL DEFAULT ${NOW},
+  expires_at TEXT    NOT NULL
+);
+
+-- Only a hash of each reset token is stored, like sessions; tokens are single-use and expire after 30 minutes.
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT    PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at TEXT    NOT NULL
 );
 
@@ -163,6 +170,22 @@ CREATE TABLE IF NOT EXISTS fulfilments (
   PRIMARY KEY (order_id, vendor)
 );
 
+-- Contact-form messages. Grievances are tracked against the 48-hour acknowledgement and
+-- one-month resolution window from the Consumer Protection (E-Commerce) Rules, 2020.
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id          TEXT PRIMARY KEY,
+  user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  name        TEXT NOT NULL,
+  email       TEXT NOT NULL,
+  topic       TEXT NOT NULL CHECK (topic IN ('general', 'order', 'return', 'vendor', 'grievance', 'privacy')),
+  order_id    TEXT,
+  message     TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+  admin_note  TEXT,
+  created_at  TEXT NOT NULL DEFAULT ${NOW},
+  updated_at  TEXT NOT NULL DEFAULT ${NOW}
+);
+
 CREATE TABLE IF NOT EXISTS wishlist (
   user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_slug TEXT    NOT NULL,
@@ -190,17 +213,19 @@ function openDatabase(): DatabaseSync {
 }
 
 // Cached on globalThis so dev-mode hot reloads reuse one connection instead of opening a new one per edit.
-// The schema text is cached too: when a reload brings new tables, they are created on the existing connection.
-const globalForDb = globalThis as unknown as { mrittikaDb?: DatabaseSync; mrittikaSchema?: string }
+// The schema and seed list are fingerprinted too: when a reload changes either, new tables and
+// seed rows are added on the existing connection without a server restart.
+const globalForDb = globalThis as unknown as { mrittikaDb?: DatabaseSync; mrittikaSetup?: string }
+const SETUP_FINGERPRINT = SCHEMA + SEED_FINGERPRINT
 
 export function getDb(): DatabaseSync {
   if (!globalForDb.mrittikaDb) {
     globalForDb.mrittikaDb = openDatabase()
-  } else if (globalForDb.mrittikaSchema !== SCHEMA) {
+  } else if (globalForDb.mrittikaSetup !== SETUP_FINGERPRINT) {
     globalForDb.mrittikaDb.exec(SCHEMA)
     seedDatabase(globalForDb.mrittikaDb)
   }
-  globalForDb.mrittikaSchema = SCHEMA
+  globalForDb.mrittikaSetup = SETUP_FINGERPRINT
   return globalForDb.mrittikaDb
 }
 

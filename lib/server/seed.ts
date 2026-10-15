@@ -14,9 +14,15 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+/**
+ * Inserts any seed vendor or product that is missing, matched by business name and slug.
+ * Existing rows are never touched, so admin and vendor edits survive, and products added to
+ * lib/products.ts later still reach databases created before them.
+ */
 function seedCatalogue(db: DatabaseSync): void {
-  const productCount = Number(db.prepare(`SELECT COUNT(*) AS n FROM products`).get()?.n ?? 0)
-  if (productCount > 0) return
+  const existingSlugs = new Set(db.prepare(`SELECT slug FROM products`).all().map(r => String(r.slug)))
+  const missing = seedProducts.filter(p => !existingSlugs.has(p.slug))
+  if (missing.length === 0) return
 
   const insertVendor = db.prepare(
     `INSERT INTO vendors (business_name, city, state, contact_email, contact_phone, categories, description, practices, status, reviewed_at)
@@ -30,10 +36,12 @@ function seedCatalogue(db: DatabaseSync): void {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
   )
 
-  const vendorIds = new Map<string, number>()
+  const vendorIds = new Map<string, number>(
+    db.prepare(`SELECT id, business_name FROM vendors`).all().map(r => [String(r.business_name), Number(r.id)]),
+  )
   db.exec('BEGIN')
   try {
-    for (const p of seedProducts) {
+    for (const p of missing) {
       let vendorId = vendorIds.get(p.vendor)
       if (vendorId === undefined) {
         const [city, state] = p.vendorLocation.split(',').map(s => s.trim())
@@ -82,6 +90,9 @@ function seedDemoAccounts(db: DatabaseSync): void {
   const vendorUserId = ensureUser(vendor.email, vendor.name, vendor.password, 'vendor')
   db.prepare(`UPDATE vendors SET user_id = ? WHERE business_name = ? AND user_id IS NULL`).run(vendorUserId, vendor.business)
 }
+
+/** Changes whenever the seed catalogue does, so a running dev server knows to seed again. */
+export const SEED_FINGERPRINT = seedProducts.map(p => p.slug).join(',')
 
 export function seedDatabase(db: DatabaseSync): void {
   seedCatalogue(db)

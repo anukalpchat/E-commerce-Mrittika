@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { getDb } from './db'
 import type { ConsentRecord } from '@/lib/auth-types'
 
-export type ConsentPolicy = 'terms'
+export type ConsentPolicy = 'terms' | 'privacy'
 export type ConsentContext = 'registration' | 'checkout' | 'vendor-application'
 
 interface ConsentInput {

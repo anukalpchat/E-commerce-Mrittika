@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import LegalLayout from '@/components/LegalLayout'
+import { GRIEVANCE_OFFICER } from '@/lib/legal'
 
 export const metadata: Metadata = { title: 'Terms & Conditions' }
 
@@ -216,7 +217,7 @@ export default function TermsPage() {
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
             <dt className="text-xs text-mist mb-0.5">Name</dt>
-            <dd className="font-sans text-ink font-medium">[Grievance Officer Name — to be appointed]</dd>
+            <dd className="font-sans text-ink font-medium">{GRIEVANCE_OFFICER.name} <span className="text-xs text-mist font-normal">(fictional, for this demo)</span></dd>
           </div>
           <div>
             <dt className="text-xs text-mist mb-0.5">Email</dt>
@@ -228,11 +229,11 @@ export default function TermsPage() {
           </div>
           <div>
             <dt className="text-xs text-mist mb-0.5">Phone</dt>
-            <dd className="font-sans text-ink">+91 [number to be confirmed]</dd>
+            <dd className="font-sans text-ink">{GRIEVANCE_OFFICER.phone}</dd>
           </div>
           <div>
             <dt className="text-xs text-mist mb-0.5">Address</dt>
-            <dd className="font-sans text-ink">Mrittika, Mumbai, Maharashtra, India</dd>
+            <dd className="font-sans text-ink">{GRIEVANCE_OFFICER.address}</dd>
           </div>
           <div>
             <dt className="text-xs text-mist mb-0.5">Working Hours</dt>

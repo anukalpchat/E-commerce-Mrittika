@@ -8,6 +8,9 @@ import { listAddresses, listWishlist } from '@/lib/server/account'
 import { getCurrentUser } from '@/lib/server/auth'
 import { listConsentsForUser } from '@/lib/server/consent'
 import { listOrdersForUser } from '@/lib/server/orders'
+import { listTicketsForUser } from '@/lib/server/support'
+import { SUPPORT_TOPICS, TICKET_STATUS_LABELS } from '@/lib/support-shared'
+import StatusPill from '@/components/StatusPill'
 import AccountShell, { AccountSection } from './AccountShell'
 import AddressBook from './AddressBook'
 import ProfileForm from './ProfileForm'
@@ -16,7 +19,7 @@ import WishlistGrid from './WishlistGrid'
 export const metadata: Metadata = { title: 'My Account' }
 export const dynamic = 'force-dynamic'
 
-const TABS: AccountSection[] = ['profile', 'orders', 'addresses', 'wishlist', 'privacy']
+const TABS: AccountSection[] = ['profile', 'orders', 'addresses', 'wishlist', 'support', 'privacy']
 
 export default function AccountPage({ searchParams }: { searchParams: { tab?: string } }) {
   const user = getCurrentUser()
@@ -42,6 +45,7 @@ export default function AccountPage({ searchParams }: { searchParams: { tab?: st
           <WishlistGrid products={listWishlist(user.id)} />
         </Section>
       )}
+      {tab === 'support' && <SupportSection userId={user.id} />}
       {tab === 'privacy' && <ConsentSection userId={user.id} />}
     </AccountShell>
   )
@@ -95,6 +99,38 @@ function OrdersSection({ userId }: { userId: number }) {
   )
 }
 
+function SupportSection({ userId }: { userId: number }) {
+  const tickets = listTicketsForUser(userId)
+  const topicLabel = (value: string) => SUPPORT_TOPICS.find(t => t.value === value)?.label ?? value
+  return (
+    <Section title="Support Tickets" description="Messages you sent while signed in, and our replies.">
+      {tickets.length === 0 ? (
+        <p className="text-sm text-mist font-sans">
+          No tickets yet. Need help? <Link href="/contact" className="text-sienna underline">Contact us</Link>.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {tickets.map(t => (
+            <li key={t.id} className="bg-parchment border border-sand rounded-sm p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="font-mono text-sm text-ink">{t.id}</p>
+                <StatusPill tone={t.status === 'resolved' ? 'good' : 'waiting'}>{TICKET_STATUS_LABELS[t.status]}</StatusPill>
+                <span className="text-xs text-mist font-sans">{topicLabel(t.topic)} · {formatDateTime(t.createdAt)}</span>
+              </div>
+              <p className="text-sm font-sans text-ink mt-2 whitespace-pre-line line-clamp-3">{t.message}</p>
+              {t.status === 'resolved' && t.adminNote && (
+                <p className="text-sm font-sans text-canopy mt-2"><span className="text-xs uppercase tracking-widest">Resolution:</span> {t.adminNote}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  )
+}
+
+const POLICY_LABELS: Record<string, string> = { terms: 'Terms & Conditions', privacy: 'Privacy Policy' }
+
 const CONTEXT_LABELS: Record<string, string> = {
   registration: 'Account registration',
   checkout: 'Checkout',
@@ -124,7 +160,7 @@ function ConsentSection({ userId }: { userId: number }) {
             <tbody>
               {consents.map(c => (
                 <tr key={c.id} className="border-b border-sand/60 text-ink">
-                  <td className="py-2 pr-4">{c.policy === 'terms' ? 'Terms & Conditions' : c.policy}</td>
+                  <td className="py-2 pr-4">{POLICY_LABELS[c.policy] ?? c.policy}</td>
                   <td className="py-2 pr-4 font-mono">{c.policyVersion}</td>
                   <td className="py-2 pr-4">{CONTEXT_LABELS[c.context] ?? c.context}</td>
                   <td className="py-2">{formatDateTime(c.acceptedAt)}</td>

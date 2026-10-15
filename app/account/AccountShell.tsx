@@ -4,7 +4,7 @@ import type { PublicUser } from '@/lib/auth-types'
 import { formatDate } from '@/lib/format'
 import SignOutButton from './SignOutButton'
 
-export type AccountSection = 'profile' | 'orders' | 'addresses' | 'wishlist' | 'privacy' | 'impact'
+export type AccountSection = 'profile' | 'orders' | 'addresses' | 'wishlist' | 'support' | 'privacy' | 'impact'
 
 const SECTIONS: { id: AccountSection; label: string; href: string }[] = [
   { id: 'profile', label: 'Profile', href: '/account' },
@@ -12,6 +12,7 @@ const SECTIONS: { id: AccountSection; label: string; href: string }[] = [
   { id: 'impact', label: 'My Impact', href: '/account/impact' },
   { id: 'addresses', label: 'Addresses', href: '/account?tab=addresses' },
   { id: 'wishlist', label: 'Wishlist', href: '/account?tab=wishlist' },
+  { id: 'support', label: 'Support Tickets', href: '/account?tab=support' },
   { id: 'privacy', label: 'Consent Records', href: '/account?tab=privacy' },
 ]
 

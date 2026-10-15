@@ -6,7 +6,7 @@ import { formatDate, formatDateTime } from '@/lib/format'
 import { OrderDetail, splitGst } from '@/lib/orders-shared'
 import { formatPrice } from '@/lib/products'
 import { getCurrentUser } from '@/lib/server/auth'
-import { getOrderForUser } from '@/lib/server/orders'
+import { getOrderForUser, isCancellable } from '@/lib/server/orders'
 import OrderActions from './OrderActions'
 
 export const metadata: Metadata = { title: 'Your Order' }
@@ -46,7 +46,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-        <OrderActions orderId={order.id} total={order.total} canPay={canPay} canPrint={isPaid} />
+        <OrderActions orderId={order.id} total={order.total} canPay={canPay} canPrint={isPaid} canCancel={isCancellable(order)} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
           <section className="md:col-span-2 bg-parchment border border-sand rounded-sm p-6" aria-labelledby="tracking-heading">
@@ -153,7 +153,9 @@ function Invoice({ order, isPaid }: { order: OrderDetail; isPaid: boolean }) {
           <p className="text-xs text-mist font-sans mt-1">Marketplace for verified sustainable goods</p>
         </div>
         <div className="text-right">
-          <h2 id="invoice-heading" className="font-display text-2xl text-ink">{isPaid ? 'Invoice' : 'Order summary'}</h2>
+          <h2 id="invoice-heading" className="font-display text-2xl text-ink">
+            {isPaid ? 'Invoice' : order.status === 'cancelled' ? 'Cancelled order' : 'Order summary'}
+          </h2>
           <p className="text-xs font-sans text-mist">Order <span className="font-mono text-ink">{order.id}</span></p>
           <p className="text-xs font-sans text-mist">Date {formatDate(order.paidAt ?? order.createdAt)}</p>
         </div>
@@ -211,7 +213,9 @@ function Invoice({ order, isPaid }: { order: OrderDetail; isPaid: boolean }) {
         <Row label="GST" value={formatPrice(gstTotal)} />
         <Row label="Shipping" value={order.shipping === 0 ? 'FREE' : formatPrice(order.shipping)} />
         <div className="flex justify-between border-t border-sand pt-2">
-          <dt className="text-ink font-medium">{isPaid ? 'Total paid' : 'Total due'}</dt>
+          <dt className="text-ink font-medium">
+            {isPaid ? 'Total paid' : order.status === 'cancelled' && order.paidAt ? 'Total refunded (simulated)' : 'Total due'}
+          </dt>
           <dd className="font-display text-xl text-ink">{formatPrice(order.total)}</dd>
         </div>
       </dl>

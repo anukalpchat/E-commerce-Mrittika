@@ -12,7 +12,8 @@ const legalLinks = [
   { label: 'Terms & Conditions', href: '/terms' },
   { label: 'Disclaimer', href: '/disclaimer' },
   { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Grievance Redressal', href: '/terms#grievance' },
+  { label: 'Shipping, Returns & Refunds', href: '/returns-shipping' },
+  { label: 'Grievance Redressal', href: '/contact#grievance' },
 ]
 
 const companyLinks = [

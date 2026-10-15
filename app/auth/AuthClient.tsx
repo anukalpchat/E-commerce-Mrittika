@@ -12,7 +12,7 @@ import {
   validateLogin,
   validateRegistration,
 } from '@/lib/auth-validation'
-import { TERMS_LAST_UPDATED } from '@/lib/legal'
+import { PRIVACY_LAST_UPDATED, TERMS_LAST_UPDATED } from '@/lib/legal'
 
 type Tab = 'login' | 'register'
 
@@ -125,6 +125,9 @@ function LoginForm({ onSwitch }: { onSwitch: () => void }) {
       <Field id="login-password" label="Password" error={fieldErrors.password}>
         <input id="login-password" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} {...inputProps('login-password', fieldErrors.password)} />
       </Field>
+      <div className="-mt-2 text-right">
+        <Link href="/auth/reset" className="text-xs font-sans text-mist underline underline-offset-2 hover:text-ink">Forgot password?</Link>
+      </div>
       <SubmitButton submitting={submitting} label="Sign In" busyLabel="Signing in…" />
       <p className="text-xs text-mist font-sans text-center">
         New to Mrittika?{' '}
@@ -140,6 +143,7 @@ function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
   const afterAuth = useAfterAuth()
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' })
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -151,7 +155,7 @@ function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setFormError('')
-    const payload = { ...form, acceptTerms }
+    const payload = { ...form, acceptTerms, acceptPrivacy }
     const errors = validateRegistration(payload)
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
@@ -211,6 +215,25 @@ function RegisterForm({ onSwitch }: { onSwitch: () => void }) {
         </label>
         {fieldErrors.acceptTerms && (
           <p id="reg-terms-error" className="mt-2 text-xs text-sienna font-sans">{fieldErrors.acceptTerms}</p>
+        )}
+        <label htmlFor="reg-privacy" className="flex items-start gap-3 cursor-pointer mt-4">
+          <input
+            id="reg-privacy"
+            type="checkbox"
+            checked={acceptPrivacy}
+            onChange={e => setAcceptPrivacy(e.target.checked)}
+            aria-invalid={!!fieldErrors.acceptPrivacy}
+            aria-describedby={fieldErrors.acceptPrivacy ? 'reg-privacy-error' : undefined}
+            className="mt-0.5 accent-canopy shrink-0 w-4 h-4"
+          />
+          <span className="text-xs font-sans text-mist leading-relaxed">
+            I consent to Mrittika processing my personal data — account details, addresses and order history, which powers my impact
+            dashboard — as described in the{' '}
+            <Link href="/privacy" target="_blank" className="text-gold underline">Privacy Policy</Link> (last updated {PRIVACY_LAST_UPDATED}).
+          </span>
+        </label>
+        {fieldErrors.acceptPrivacy && (
+          <p id="reg-privacy-error" className="mt-2 text-xs text-sienna font-sans">{fieldErrors.acceptPrivacy}</p>
         )}
       </div>
 

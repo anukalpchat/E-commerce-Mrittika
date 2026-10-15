@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { normaliseEmail, validateRegistration } from '@/lib/auth-validation'
-import { TERMS_VERSION } from '@/lib/legal'
+import { PRIVACY_VERSION, TERMS_VERSION } from '@/lib/legal'
 import { createSession, hashPassword, toPublicUser } from '@/lib/server/auth'
 import { recordConsent } from '@/lib/server/consent'
 import { getDb, transaction } from '@/lib/server/db'
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     phone: stringField(body, 'phone').trim(),
     password: stringField(body, 'password'),
     acceptTerms: body.acceptTerms === true,
+    acceptPrivacy: body.acceptPrivacy === true,
   }
   const fieldErrors = validateRegistration(input)
   if (Object.keys(fieldErrors).length > 0) {
@@ -41,10 +42,8 @@ export async function POST(request: Request) {
       .get(input.name.trim(), email, input.phone || null, passwordHash)
     if (!row) throw new Error(`User insert for ${email} returned no row`)
     const created = toPublicUser(row)
-    recordConsent(
-      { userId: created.id, policy: 'terms', policyVersion: TERMS_VERSION, context: 'registration', request },
-      db,
-    )
+    recordConsent({ userId: created.id, policy: 'terms', policyVersion: TERMS_VERSION, context: 'registration', request }, db)
+    recordConsent({ userId: created.id, policy: 'privacy', policyVersion: PRIVACY_VERSION, context: 'registration', request }, db)
     return created
   })
 

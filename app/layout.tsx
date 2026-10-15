@@ -5,6 +5,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { CartProvider } from '@/lib/cart-context'
 import { AuthProvider } from '@/lib/auth-context'
+import PrivacyNotice from '@/components/PrivacyNotice'
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Header />
             <div className="flex-1">{children}</div>
             <Footer />
+            <PrivacyNotice />
           </CartProvider>
         </AuthProvider>
       </body>

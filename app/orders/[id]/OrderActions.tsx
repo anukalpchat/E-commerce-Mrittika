@@ -5,20 +5,22 @@ import { useRouter } from 'next/navigation'
 import type { PaymentOutcome } from '@/lib/orders-shared'
 import MockPaymentModal from '@/app/checkout/MockPaymentModal'
 import { useCart } from '@/lib/cart-context'
+import PostButton from '@/components/PostButton'
 
 interface Props {
   orderId: string
   total: number
   canPay: boolean
   canPrint: boolean
+  canCancel: boolean
 }
 
-export default function OrderActions({ orderId, total, canPay, canPrint }: Props) {
+export default function OrderActions({ orderId, total, canPay, canPrint, canCancel }: Props) {
   const router = useRouter()
   const { clearCart } = useCart()
   const [paying, setPaying] = useState(false)
 
-  if (!canPay && !canPrint) return null
+  if (!canPay && !canPrint && !canCancel) return null
 
   async function handleOutcome(outcome: PaymentOutcome, method: string): Promise<string | null> {
     try {
@@ -60,6 +62,16 @@ export default function OrderActions({ orderId, total, canPay, canPrint }: Props
         >
           Print / Save Invoice
         </button>
+      )}
+      {canCancel && (
+        <PostButton
+          url={`/api/orders/${orderId}/cancel`}
+          body={{}}
+          variant="danger"
+          confirmMessage="Cancel this order? Nothing has shipped yet, so you will get a full refund."
+        >
+          Cancel Order
+        </PostButton>
       )}
       {paying && (
         <MockPaymentModal

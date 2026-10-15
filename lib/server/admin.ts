@@ -4,6 +4,7 @@ import { toVendor, toVendorProduct } from './catalog'
 import type { PublicUser } from '@/lib/auth-types'
 import { OrderStatus, PAID_STATUSES } from '@/lib/orders-shared'
 import type { Vendor, VendorProduct, VendorStatus } from '@/lib/vendor-shared'
+import { MINIMUM_LISTING_SCORE } from '@/lib/scoring'
 
 export class AdminError extends Error {
   constructor(public status: number, message: string) {
@@ -126,6 +127,9 @@ export function reviewProduct(productId: number, action: ProductAction, score: n
     if (product.status !== 'pending_review') throw new AdminError(409, `${product.name} is not awaiting review`)
     if (score === null || !Number.isInteger(score) || score < 0 || score > 100) {
       throw new AdminError(400, 'Set a sustainability score between 0 and 100 to approve')
+    }
+    if (score < MINIMUM_LISTING_SCORE) {
+      throw new AdminError(400, `Products scoring below ${MINIMUM_LISTING_SCORE} are not listed. Reject it with a note explaining what would raise the score.`)
     }
     status = 'active'
   } else if (action === 'reject') {

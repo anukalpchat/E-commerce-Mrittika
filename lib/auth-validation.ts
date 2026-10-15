@@ -6,6 +6,7 @@ export interface RegistrationInput {
   phone: string
   password: string
   acceptTerms: boolean
+  acceptPrivacy: boolean
 }
 
 export interface LoginInput {
@@ -50,8 +51,17 @@ export function validateRegistration(input: RegistrationInput): FieldErrors {
   if (input.acceptTerms !== true) {
     errors.acceptTerms = 'You must confirm you are 18+ and accept the Terms & Conditions to create an account'
   }
+  if (input.acceptPrivacy !== true) {
+    errors.acceptPrivacy = 'We need your consent to process your data as described in the Privacy Policy'
+  }
 
   return errors
+}
+
+export function validateNewPassword(password: string): string | null {
+  if (password.length < PASSWORD_MIN_LENGTH) return `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+  if (password.length > PASSWORD_MAX_LENGTH) return `Password must be ${PASSWORD_MAX_LENGTH} characters or fewer`
+  return null
 }
 
 export function validateLogin(input: LoginInput): FieldErrors {

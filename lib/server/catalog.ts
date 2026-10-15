@@ -218,3 +218,70 @@ export function updateVendorProduct(vendorId: number, productId: number, input: 
     )
   return getVendorProduct(vendorId, productId)
 }
+
+export function getCatalogueStats(): { liveProducts: number; verifiedVendors: number; averageScore: number } {
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS products, COUNT(DISTINCT v.id) AS vendors, ROUND(AVG(p.sustainability_score)) AS avg_score
+       FROM products p JOIN vendors v ON v.id = p.vendor_id WHERE ${SHOPPABLE}`,
+    )
+    .get()
+  return { liveProducts: Number(row?.products ?? 0), verifiedVendors: Number(row?.vendors ?? 0), averageScore: Number(row?.avg_score ?? 0) }
+}
+
+export type ImpactFilter = 'plastic' | 'water' | 'waste'
+export type SearchSort = 'relevance' | 'score' | 'price-asc' | 'price-desc'
+
+export interface SearchOptions {
+  query: string
+  category: Category | null
+  impact: ImpactFilter | null
+  minScore: number
+  sort: SearchSort
+}
+
+const IMPACT_COLUMN: Record<ImpactFilter, string> = {
+  plastic: 'plastic_avoided_g',
+  water: 'water_saved_l',
+  waste: 'waste_diverted_g',
+}
+
+/** Text search over shoppable products. Every word must match somewhere; matches in the name rank highest. */
+export function searchProducts(options: SearchOptions): Product[] {
+  const conditions = [SHOPPABLE, 'p.sustainability_score >= ?']
+  const params: (string | number)[] = [options.minScore]
+  if (options.category) {
+    conditions.push('p.category = ?')
+    params.push(options.category)
+  }
+  if (options.impact) conditions.push(`p.${IMPACT_COLUMN[options.impact]} > 0`)
+
+  const products = getDb()
+    .prepare(`SELECT ${PRODUCT_COLUMNS} FROM products p JOIN vendors v ON v.id = p.vendor_id WHERE ${conditions.join(' AND ')}`)
+    .all(...params)
+    .map(toProduct)
+
+  const words = options.query.toLowerCase().split(/\s+/).filter(w => w.length > 1).slice(0, 8)
+  const scored = products
+    .map(p => {
+      const name = p.name.toLowerCase()
+      const strong = [...p.tags, ...p.materials, ...p.certifications, p.vendor, p.categoryLabel].join(' ').toLowerCase()
+      const weak = `${p.shortDescription} ${p.description}`.toLowerCase()
+      let relevance = 0
+      for (const w of words) {
+        const hit = (name.includes(w) ? 3 : 0) + (strong.includes(w) ? 2 : 0) + (weak.includes(w) ? 1 : 0)
+        if (hit === 0) return null
+        relevance += hit
+      }
+      return { p, relevance }
+    })
+    .filter((r): r is { p: Product; relevance: number } => r !== null)
+
+  const by: Record<SearchSort, (a: typeof scored[number], b: typeof scored[number]) => number> = {
+    relevance: (a, b) => b.relevance - a.relevance || b.p.sustainabilityScore - a.p.sustainabilityScore,
+    score: (a, b) => b.p.sustainabilityScore - a.p.sustainabilityScore,
+    'price-asc': (a, b) => a.p.price - b.p.price,
+    'price-desc': (a, b) => b.p.price - a.p.price,
+  }
+  return scored.sort(by[options.sort]).map(r => r.p)
+}

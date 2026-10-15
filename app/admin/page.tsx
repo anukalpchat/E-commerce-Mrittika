@@ -9,17 +9,20 @@ import { formatPrice, type Category } from '@/lib/products'
 import { getCurrentUser } from '@/lib/server/auth'
 import { getAdmin, getOverview, listAllOrders, listAllProducts, listConsentLog, listUsers, listVendors } from '@/lib/server/admin'
 import { CATEGORY_LABELS, PRODUCT_STATUS_LABELS, ProductStatus, VENDOR_STATUS_LABELS, VendorStatus } from '@/lib/vendor-shared'
-import { ProductReviewControls, VendorReviewControls } from './ReviewControls'
+import { ProductReviewControls, TicketControls, VendorReviewControls } from './ReviewControls'
+import { countOpenTickets, listTickets } from '@/lib/server/support'
+import { SUPPORT_TOPICS, TICKET_STATUS_LABELS } from '@/lib/support-shared'
 
 export const metadata: Metadata = { title: 'Admin Panel' }
 export const dynamic = 'force-dynamic'
 
-type Tab = 'overview' | 'vendors' | 'products' | 'orders' | 'consents' | 'users'
+type Tab = 'overview' | 'vendors' | 'products' | 'orders' | 'support' | 'consents' | 'users'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'vendors', label: 'Vendors' },
   { id: 'products', label: 'Products' },
   { id: 'orders', label: 'Orders' },
+  { id: 'support', label: 'Support & Grievances' },
   { id: 'consents', label: 'Consent Log' },
   { id: 'users', label: 'Users' },
 ]
@@ -43,6 +46,7 @@ export default function AdminPage({ searchParams }: { searchParams: { tab?: stri
   }
   const tab = TABS.find(t => t.id === searchParams.tab)?.id ?? 'overview'
   const overview = getOverview()
+  const openTickets = countOpenTickets()
 
   return (
     <main className="min-h-screen bg-vellum">
@@ -53,7 +57,7 @@ export default function AdminPage({ searchParams }: { searchParams: { tab?: stri
           <p className="text-xs text-sand font-sans mt-1">Signed in as {admin.email}</p>
           <nav aria-label="Admin sections" className="mt-6 flex gap-1 overflow-x-auto">
             {TABS.map(t => {
-              const badge = t.id === 'vendors' ? overview.vendors.pending : t.id === 'products' ? overview.productsAwaitingReview : 0
+              const badge = t.id === 'vendors' ? overview.vendors.pending : t.id === 'products' ? overview.productsAwaitingReview : t.id === 'support' ? openTickets : 0
               return (
                 <Link
                   key={t.id}
@@ -73,10 +77,11 @@ export default function AdminPage({ searchParams }: { searchParams: { tab?: stri
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10">
-        {tab === 'overview' && <Overview overview={overview} />}
+        {tab === 'overview' && <Overview overview={overview} openTickets={openTickets} />}
         {tab === 'vendors' && <Vendors />}
         {tab === 'products' && <Products />}
         {tab === 'orders' && <Orders />}
+        {tab === 'support' && <Support />}
         {tab === 'consents' && <Consents />}
         {tab === 'users' && <Users />}
       </div>
@@ -98,7 +103,7 @@ function Tile({ label, value, href }: { label: string; value: string; href?: str
   )
 }
 
-function Overview({ overview }: { overview: ReturnType<typeof getOverview> }) {
+function Overview({ overview, openTickets }: { overview: ReturnType<typeof getOverview>; openTickets: number }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <Tile label="Vendor applications" value={String(overview.vendors.pending)} href="/admin?tab=vendors" />
@@ -109,6 +114,7 @@ function Overview({ overview }: { overview: ReturnType<typeof getOverview> }) {
       <Tile label="GMV (paid)" value={formatPrice(overview.gmv)} />
       <Tile label="Platform commission" value={formatPrice(overview.platformCommission)} />
       <Tile label="Registered users" value={String(overview.users)} href="/admin?tab=users" />
+      <Tile label="Open support tickets" value={String(openTickets)} href="/admin?tab=support" />
     </div>
   )
 }
@@ -217,6 +223,47 @@ function Orders() {
   )
 }
 
+const TOPIC_LABELS = Object.fromEntries(SUPPORT_TOPICS.map(t => [t.value, t.label]))
+const TICKET_TONE: Record<string, Tone> = { open: 'waiting', in_progress: 'waiting', resolved: 'good' }
+
+function Support() {
+  const tickets = listTickets()
+  if (tickets.length === 0) return <Empty text="No support tickets yet." />
+  const now = new Date().toISOString()
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-mist font-sans max-w-3xl">
+        Open tickets first, grievances on top. Deadlines follow the E-Commerce Rules: acknowledge within 48 hours, resolve within 30 days.
+      </p>
+      <ul className="space-y-3">
+        {tickets.map(t => {
+          const overdue = t.status !== 'resolved' && (t.status === 'open' ? now > t.acknowledgeBy : now > t.resolveBy)
+          return (
+            <li key={t.id} className={`bg-parchment border rounded-sm p-5 ${overdue ? 'border-sienna/60' : 'border-sand'}`}>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="font-mono text-ink">{t.id}</p>
+                <StatusPill tone={TICKET_TONE[t.status]}>{TICKET_STATUS_LABELS[t.status]}</StatusPill>
+                <StatusPill tone={t.topic === 'grievance' ? 'bad' : 'muted'}>{TOPIC_LABELS[t.topic]}</StatusPill>
+                {overdue && <StatusPill tone="bad">Overdue</StatusPill>}
+              </div>
+              <p className="text-xs text-mist font-sans mt-1">
+                {t.name} · {t.email} · {formatDateTime(t.createdAt)}
+                {t.orderId && <> · Order <span className="font-mono">{t.orderId}</span></>}
+                {t.status === 'open' && <> · acknowledge by {formatDateTime(t.acknowledgeBy)}</>}
+                {t.status === 'in_progress' && <> · resolve by {formatDateTime(t.resolveBy)}</>}
+              </p>
+              <p className="text-sm font-sans text-ink mt-3 whitespace-pre-line">{t.message}</p>
+              <div className="mt-4"><TicketControls ticketId={t.id} status={t.status} adminNote={t.adminNote} /></div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+const POLICY_LABELS: Record<string, string> = { terms: 'Terms & Conditions', privacy: 'Privacy Policy' }
+
 const CONTEXT_LABELS: Record<string, string> = { registration: 'Registration', checkout: 'Checkout', 'vendor-application': 'Vendor application' }
 
 function Consents() {
@@ -232,7 +279,7 @@ function Consents() {
             <tr key={c.id} className="border-b border-sand/60">
               <td className="py-2 pr-4 whitespace-nowrap">{formatDateTime(c.acceptedAt)}</td>
               <td className="py-2 pr-4">{c.email}</td>
-              <td className="py-2 pr-4">{c.policy === 'terms' ? 'Terms & Conditions' : c.policy}</td>
+              <td className="py-2 pr-4">{POLICY_LABELS[c.policy] ?? c.policy}</td>
               <td className="py-2 pr-4 font-mono">{c.policyVersion}</td>
               <td className="py-2 pr-4">{CONTEXT_LABELS[c.context] ?? c.context}</td>
               <td className="py-2 font-mono">{c.ipAddress ?? '—'}</td>

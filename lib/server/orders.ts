@@ -3,7 +3,7 @@ import type { SQLValue } from 'node:sqlite'
 import { getDb, transaction } from './db'
 import { recordConsent } from './consent'
 import { getActiveProduct, getImpactBySlug } from './catalog'
-import { TERMS_VERSION } from '@/lib/legal'
+import { PRIVACY_VERSION, TERMS_VERSION } from '@/lib/legal'
 import {
   AddressInput,
   MAX_QUANTITY_PER_ITEM,
@@ -89,6 +89,7 @@ export function createOrder(userId: number, lines: CartLine[], address: AddressI
     }
     addEvent(orderId, 'pending_payment', 'Order placed — awaiting payment', db)
     recordConsent({ userId, policy: 'terms', policyVersion: TERMS_VERSION, context: 'checkout', request }, db)
+    recordConsent({ userId, policy: 'privacy', policyVersion: PRIVACY_VERSION, context: 'checkout', request }, db)
   })
 
   const order = getOrderForUser(userId, orderId)
@@ -135,6 +136,31 @@ export function recordPaymentOutcome(userId: number, orderId: string, outcome: P
 
   const updated = getOrderForUser(userId, orderId)
   if (!updated) throw new Error(`Order ${orderId} disappeared while recording payment`)
+  return updated
+}
+
+/** True while a paid order can still be cancelled by the customer: no vendor has dispatched anything yet. */
+export function isCancellable(order: OrderDetail): boolean {
+  if (order.status !== 'paid') return false
+  const shipped = getDb().prepare(`SELECT 1 FROM fulfilments WHERE order_id = ?`).get(order.id)
+  return !shipped
+}
+
+/** Cancels a paid, undispatched order: returns stock and records a (simulated) full refund. */
+export function cancelOrder(userId: number, orderId: string): OrderDetail {
+  const order = getOrderForUser(userId, orderId)
+  if (!order) throw new OrderError(404, `Order ${orderId} was not found on your account`)
+  if (!isCancellable(order)) {
+    throw new OrderError(409, `Order ${orderId} can no longer be cancelled online (status "${order.status}"). Request a return instead.`)
+  }
+  transaction(db => {
+    const restock = db.prepare(`UPDATE products SET stock_count = stock_count + ? WHERE slug = ?`)
+    for (const item of order.items) restock.run(item.quantity, item.productSlug)
+    db.prepare(`UPDATE orders SET status = 'cancelled' WHERE id = ?`).run(orderId)
+    addEvent(orderId, 'cancelled', `Cancelled by customer — full refund of ₹${order.total.toLocaleString('en-IN')} issued (simulated)`, db)
+  })
+  const updated = getOrderForUser(userId, orderId)
+  if (!updated) throw new Error(`Order ${orderId} disappeared while cancelling`)
   return updated
 }
 
@@ -279,4 +305,38 @@ export function computeImpactForUser(userId: number): ImpactSummary {
   summary.byOrder = Array.from(orders.values())
   summary.byCategory = Array.from(categories.values()).sort((a, b) => b.items - a.items)
   return summary
+}
+
+export interface PlatformImpact {
+  paidOrders: number
+  buyers: number
+  plasticAvoidedG: number
+  waterSavedL: number
+  wasteDivertedG: number
+}
+
+/** Totals across every customer's paid orders, for the public Our Impact section. */
+export function computePlatformImpact(): PlatformImpact {
+  const placeholders = PAID_STATUSES.map(() => '?').join(', ')
+  const db = getDb()
+  const rows = db
+    .prepare(
+      `SELECT i.product_slug, SUM(i.quantity) AS qty FROM order_items i JOIN orders o ON o.id = i.order_id
+       WHERE o.status IN (${placeholders}) GROUP BY i.product_slug`,
+    )
+    .all(...PAID_STATUSES)
+  const impact = getImpactBySlug(rows.map(r => str(r.product_slug)))
+  const totals = { plasticAvoidedG: 0, waterSavedL: 0, wasteDivertedG: 0 }
+  for (const r of rows) {
+    const per = impact.get(str(r.product_slug))
+    if (!per) continue
+    const qty = Number(r.qty)
+    totals.plasticAvoidedG += per.plasticAvoidedG * qty
+    totals.waterSavedL += per.waterSavedL * qty
+    totals.wasteDivertedG += per.wasteDivertedG * qty
+  }
+  const counts = db
+    .prepare(`SELECT COUNT(*) AS orders, COUNT(DISTINCT user_id) AS buyers FROM orders WHERE status IN (${placeholders})`)
+    .get(...PAID_STATUSES)
+  return { paidOrders: Number(counts?.orders ?? 0), buyers: Number(counts?.buyers ?? 0), ...totals }
 }

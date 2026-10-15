@@ -31,6 +31,7 @@ const validRegistration = email => ({
   phone: '9876543210',
   password: 'compost-heap-42',
   acceptTerms: true,
+  acceptPrivacy: true,
 })
 
 test('registering stores the user, starts a session and records T&C consent', async () => {
@@ -48,11 +49,12 @@ test('registering stores the user, starts a session and records T&C consent', as
 
   const session = await me(cookie)
   assert.equal(session.user.email, email)
-  assert.equal(session.consents.length, 1)
-  assert.equal(session.consents[0].policy, 'terms')
-  assert.equal(session.consents[0].context, 'registration')
-  assert.ok(session.consents[0].policyVersion)
-  assert.ok(!Number.isNaN(Date.parse(session.consents[0].acceptedAt)))
+  assert.deepEqual(session.consents.map(c => c.policy).sort(), ['privacy', 'terms'])
+  for (const consent of session.consents) {
+    assert.equal(consent.context, 'registration')
+    assert.ok(consent.policyVersion)
+    assert.ok(!Number.isNaN(Date.parse(consent.acceptedAt)))
+  }
 })
 
 test('registration is rejected when terms are not accepted, and no account is created', async () => {
@@ -65,6 +67,14 @@ test('registration is rejected when terms are not accepted, and no account is cr
 
   const login = await post('/api/auth/login', { email, password: 'compost-heap-42' })
   assert.equal(login.res.status, 401, 'account must not exist after a rejected registration')
+})
+
+test('registration is rejected without separate privacy consent', async () => {
+  const email = uniqueEmail('noprivacy')
+  const { res, data } = await post('/api/auth/register', { ...validRegistration(email), acceptPrivacy: false })
+  assert.equal(res.status, 400)
+  assert.ok(data.fieldErrors.acceptPrivacy)
+  assert.equal(data.fieldErrors.acceptTerms, undefined)
 })
 
 test('acceptTerms must be the boolean true, not a truthy string', async () => {
@@ -87,6 +97,7 @@ test('invalid fields are reported per field', async () => {
     phone: '12345',
     password: 'short',
     acceptTerms: true,
+    acceptPrivacy: true,
   })
   assert.equal(res.status, 400)
   assert.deepEqual(Object.keys(data.fieldErrors).sort(), ['email', 'name', 'password', 'phone'])

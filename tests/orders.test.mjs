@@ -30,7 +30,7 @@ async function call(method, path, { body, cookie } = {}) {
 async function newUser(label) {
   const email = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`
   const { res } = await call('POST', '/api/auth/register', {
-    body: { name: 'Kavya Menon', email, phone: '', password: 'mud-and-monsoon-7', acceptTerms: true },
+    body: { name: 'Kavya Menon', email, phone: '', password: 'mud-and-monsoon-7', acceptTerms: true, acceptPrivacy: true },
   })
   assert.equal(res.status, 201)
   const cookie = res.headers.get('set-cookie').match(/mrittika_session=[^;]+/)[0]
@@ -55,7 +55,8 @@ test('placing an order requires accepting the terms, and records checkout consen
   assert.equal(accepted.res.status, 201)
 
   const me = await call('GET', '/api/auth/me', { cookie })
-  assert.deepEqual(me.data.consents.map(c => c.context).sort(), ['checkout', 'registration'])
+  const given = me.data.consents.map(c => `${c.context}:${c.policy}`).sort()
+  assert.deepEqual(given, ['checkout:privacy', 'checkout:terms', 'registration:privacy', 'registration:terms'])
 })
 
 test('server prices the order from the catalogue and ignores client-sent prices', async () => {
@@ -113,6 +114,28 @@ test('cancelling payment cancels the order', async () => {
   assert.equal(cancelled.data.order.status, 'cancelled')
   const pay = await call('POST', `/api/orders/${data.order.id}/payment`, { cookie, body: { outcome: 'success', method: 'x' } })
   assert.equal(pay.res.status, 409)
+})
+
+test('a paid order can be cancelled until a vendor ships it; stock is returned', async () => {
+  const { cookie } = await newUser('order-cancel-paid')
+  const { data } = await placeOrder(cookie, { items: [{ slug: 'kantha-quilt', quantity: 2 }] })
+  const id = data.order.id
+  assert.equal((await call('POST', `/api/orders/${id}/cancel`, { cookie })).res.status, 409, 'unpaid orders are not cancellable this way')
+
+  await call('POST', `/api/orders/${id}/payment`, { cookie, body: { outcome: 'success', method: 'UPI · a@upi' } })
+  const stockAfterPay = (await call('GET', '/product/kantha-quilt')).data.match(/(\d+)(?:<!-- -->)? units remaining/)[1]
+
+  const other = await newUser('order-cancel-other')
+  assert.equal((await call('POST', `/api/orders/${id}/cancel`, { cookie: other.cookie })).res.status, 404)
+
+  const cancelled = await call('POST', `/api/orders/${id}/cancel`, { cookie })
+  assert.equal(cancelled.res.status, 200)
+  assert.equal(cancelled.data.order.status, 'cancelled')
+  assert.match(cancelled.data.order.events.at(-1).note, /full refund/)
+  const stockAfterCancel = (await call('GET', '/product/kantha-quilt')).data.match(/(\d+)(?:<!-- -->)? units remaining/)[1]
+  assert.equal(Number(stockAfterCancel), Number(stockAfterPay) + 2)
+
+  assert.equal((await call('POST', `/api/orders/${id}/cancel`, { cookie })).res.status, 409, 'cannot cancel twice')
 })
 
 test('invalid payment outcome is rejected', async () => {

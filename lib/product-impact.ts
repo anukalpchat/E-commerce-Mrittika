@@ -26,6 +26,22 @@ const IMPACT_BY_SLUG: Record<string, ProductImpact> = {
   'cold-pressed-coconut-oil': { plasticAvoidedG: 25,   waterSavedL: 0,    wasteDivertedG: 0 },
   'wild-forest-honey':        { plasticAvoidedG: 20,   waterSavedL: 0,    wasteDivertedG: 0 },
   'millets-variety-pack':     { plasticAvoidedG: 0,    waterSavedL: 2000, wasteDivertedG: 0 },
+  'coconut-shell-bowls':      { plasticAvoidedG: 150,  waterSavedL: 0,    wasteDivertedG: 300 },
+  'jute-floor-rug':           { plasticAvoidedG: 0,    waterSavedL: 1200, wasteDivertedG: 0 },
+  'copper-lota':              { plasticAvoidedG: 1200, waterSavedL: 0,    wasteDivertedG: 0 },
+  'soy-wax-candle':           { plasticAvoidedG: 0,    waterSavedL: 0,    wasteDivertedG: 250 },
+  'kantha-quilt':             { plasticAvoidedG: 0,    waterSavedL: 0,    wasteDivertedG: 2000 },
+  'natural-loofah-scrubber':  { plasticAvoidedG: 60,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'ubtan-face-pack':          { plasticAvoidedG: 25,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'solid-deodorant-tin':      { plasticAvoidedG: 40,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'neem-wood-comb':           { plasticAvoidedG: 30,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'ikat-cotton-saree':        { plasticAvoidedG: 0,    waterSavedL: 1500, wasteDivertedG: 0 },
+  'kantha-stitch-stole':      { plasticAvoidedG: 0,    waterSavedL: 0,    wasteDivertedG: 300 },
+  'kolhapuri-chappals':       { plasticAvoidedG: 0,    waterSavedL: 0,    wasteDivertedG: 0 },
+  'organic-jaggery':          { plasticAvoidedG: 10,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'darjeeling-green-tea':     { plasticAvoidedG: 50,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'wayanad-black-pepper':     { plasticAvoidedG: 20,   waterSavedL: 0,    wasteDivertedG: 0 },
+  'shade-grown-arabica-coffee': { plasticAvoidedG: 15, waterSavedL: 0,    wasteDivertedG: 0 },
 }
 
 export function getProductImpact(slug: string): ProductImpact {
